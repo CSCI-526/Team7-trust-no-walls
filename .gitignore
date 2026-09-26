@@ -1,0 +1,23 @@
+# Unity
+Game/[Ll]ibrary/
+Game/[Tt]emp/
+Game/[Oo]bj/
+Game/[Bb]uild/
+Game/[Bb]uilds/
+Game/[Ll]ogs/
+Game/[Uu]serSettings/
+Game/*.csproj
+Game/*.sln
+Game/*.slnx
+Game/.vs/
+Game/.idea/
+Game/*.pidb
+Game/*.userprefs
+# tooling output
+/test-results/
+/build-logs/
+/node_modules/
+.DS_Store
+.superpowers/
+Game/.vscode/
+tools/web/node_modules/

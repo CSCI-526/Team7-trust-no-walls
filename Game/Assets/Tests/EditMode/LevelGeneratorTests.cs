@@ -361,6 +361,21 @@ namespace TrustNoWall.Tests
             {
                 Assert.AreEqual(1, maze.OpenNeighbors(d.Cell).Count(), id + " decoy in a dead end");
             }
+
+            // Gates and collapsing tiles never sit on an endpoint of a phase-wall or moving-wall edge.
+            var periodic = new List<Edge>(l.PhaseWalls.Select(p => p.Edge));
+            foreach (var w in l.MovingWalls) { periodic.Add(w.A); periodic.Add(w.B); }
+            var hazards = l.RotatingGates.Select(g => g.Cell).Concat(l.CollapseTiles.Select(c => c.Cell));
+            foreach (var c in hazards)
+            {
+                Assert.IsFalse(periodic.Any(e => e.A == c || e.B == c), id + " hazard next to periodic edge " + c);
+            }
+
+            // A trigger's linked edges never touch its own plate.
+            foreach (var p in l.TriggerPlates)
+            {
+                Assert.IsFalse(p.LinkedEdges().Any(e => e.A == p.Plate || e.B == p.Plate), id + " trigger link touches plate");
+            }
         }
     }
 }

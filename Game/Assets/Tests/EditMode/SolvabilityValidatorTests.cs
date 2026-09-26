@@ -91,10 +91,30 @@ namespace TrustNoWall.Tests
         }
 
         [Test]
-        public void TemporaryCollapseOnBridge_OrPermanentOffRoute_IsAccepted()
+        public void TemporaryCollapseOnBridge_IsAccepted()
         {
             Assert.IsTrue(SolvabilityValidator.IsSolvable(TreeBuilder().Add(new CollapseTile(C(2, 1), false)).Build()));
-            Assert.IsTrue(SolvabilityValidator.IsSolvable(TreeBuilder().Add(new CollapseTile(C(0, 2), true)).Build()));
+        }
+
+        [Test]
+        public void PermanentCollapseSealingAPocketBehindIt_IsRejected()
+        {
+            // The player can walk over the intact tile (0,2) into (1,2); once it collapses they are sealed in.
+            var trap = TreeBuilder().Add(new CollapseTile(C(0, 2), true)).Build();
+            Assert.IsFalse(SolvabilityValidator.IsSolvable(trap));
+        }
+
+        [Test]
+        public void PermanentCollapse_IsAcceptedOnlyWhenNothingIsSealedBehindIt()
+        {
+            Assert.IsTrue(SolvabilityValidator.IsSolvable(TreeBuilder().Add(new CollapseTile(C(1, 2), true)).Build()));
+
+            // Loop (1,0) (1,1) (2,1) (2,0): a permanent tile on (1,1) leaves every other cell connected.
+            var loop = TreeBuilder().Carve(C(1, 1), C(2, 1)).Add(new CollapseTile(C(1, 1), true)).Build();
+            Assert.IsFalse(SolvabilityValidator.IsSolvable(loop), "(0,1) branch is behind (1,1)");
+            var loopTip = TreeBuilder().Carve(C(1, 1), C(2, 1)).Carve(C(0, 1), C(0, 0))
+                .Add(new CollapseTile(C(1, 1), true)).Build();
+            Assert.IsTrue(SolvabilityValidator.IsSolvable(loopTip));
         }
 
         [Test]
@@ -109,11 +129,32 @@ namespace TrustNoWall.Tests
         }
 
         [Test]
-        public void TriggerEdgeOffRoute_IsAccepted()
+        public void TriggerEdgeIntoDeadEnd_IsRejected()
         {
-            var ok = TreeBuilder()
+            // (1,2) is reachable only through the linked edge, which might close behind the player.
+            var trap = TreeBuilder()
                 .Add(new TriggerPlate(C(0, 1), new Edge[0], new[] { E(C(0, 2), C(1, 2)) }, 0)).Build();
-            Assert.IsTrue(SolvabilityValidator.IsSolvable(ok));
+            Assert.IsFalse(SolvabilityValidator.IsSolvable(trap));
+        }
+
+        [Test]
+        public void TriggerOpensIntoSealedPocket_IsRejected()
+        {
+            // The pocket {(0,2),(1,2)} is only reachable through an "opens" edge: checked as reachable, then a trap.
+            var trap = PocketBuilder().Carve(C(0, 1), C(0, 2))
+                .Add(new TriggerPlate(C(1, 1), new[] { E(C(0, 1), C(0, 2)) }, new Edge[0], 0)).Build();
+            Assert.IsFalse(SolvabilityValidator.IsSolvable(trap));
+        }
+
+        [Test]
+        public void TriggerEdgeOnALoop_IsAccepted()
+        {
+            var closes = TreeBuilder().Carve(C(1, 1), C(2, 1))
+                .Add(new TriggerPlate(C(0, 2), new Edge[0], new[] { E(C(1, 1), C(2, 1)) }, 0)).Build();
+            Assert.IsTrue(SolvabilityValidator.IsSolvable(closes));
+            var opens = TreeBuilder().Carve(C(1, 1), C(2, 1))
+                .Add(new TriggerPlate(C(0, 2), new[] { E(C(1, 1), C(2, 1)) }, new Edge[0], 0)).Build();
+            Assert.IsTrue(SolvabilityValidator.IsSolvable(opens));
         }
 
         [Test]

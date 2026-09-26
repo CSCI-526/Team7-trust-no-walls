@@ -4,18 +4,20 @@ using UnityEngine;
 namespace TrustNoWall.Core
 {
     /// <summary>
-    /// Conservative solvability check from the spec. Builds a directed graph over cells:
-    /// - maze walls (visible and invisible) block;
-    /// - trigger-linked edges block in both states (worst case);
-    /// - permanent collapsing tiles are removed cells;
-    /// - periodic blockers (moving walls, phase walls, rotating gates, patrols, temporary
-    ///   collapsing tiles) are passable, since waiting always works;
-    /// - one-way edges are directed;
-    /// - a teleporter pad's only exit is its target (entering the pad = arriving at the target);
-    /// - a decoy's only exit is Start;
-    /// - the Destination is a sink (arriving there completes the level).
-    /// With R = cells reachable from Start and D = cells that can reach the Destination, the
-    /// level is solvable iff Destination is in R and R is a subset of D (no reachable traps).
+    /// Conservative solvability check. Two directed graphs over cells share these rules:
+    /// maze walls (visible and invisible) block; periodic blockers (moving walls, phase walls,
+    /// rotating gates, patrols, temporary collapsing tiles) are passable, since waiting works;
+    /// one-way edges are directed; a teleporter pad's only exit is its target (entering the pad =
+    /// arriving at the target); a decoy's only exit is Start; the Destination is a sink.
+    /// They differ on the two state-dependent features:
+    /// - R (cells the player might reach from Start) is computed OPTIMISTICALLY: trigger-linked
+    ///   edges and intact permanent collapsing tiles are passable;
+    /// - D (cells that can surely reach the Destination) is computed PESSIMISTICALLY: trigger-linked
+    ///   edges are blocked in both states and permanent collapsing tiles are removed.
+    /// The level is solvable iff Destination is in R and every cell of R except the permanent
+    /// collapsing tiles themselves is in D. This rejects pockets behind a permanent tile or behind a
+    /// trigger edge that could seal the player in. (This deliberately strengthens the spec's
+    /// literal model to meet its goal: no traps anywhere reachable.)
     /// </summary>
     public static class SolvabilityValidator
     {
@@ -85,10 +87,12 @@ namespace TrustNoWall.Core
                 return false;
             }
 
-            // Directed arcs collected as parallel arrays, then flooded via compressed adjacency.
+            // Arcs as parallel arrays. "Opt" arcs build R, "Pes" arcs build D.
             int count = n * n;
-            var arcFrom = new List<int>(count * 4);
-            var arcTo = new List<int>(count * 4);
+            var optFrom = new List<int>(count * 4);
+            var optTo = new List<int>(count * 4);
+            var pesFrom = new List<int>(count * 4);
+            var pesTo = new List<int>(count * 4);
 
             for (int x = 0; x < n; x++)
             {
@@ -96,19 +100,26 @@ namespace TrustNoWall.Core
                 {
                     var cell = new Vector2Int(x, y);
 
-                    // Removed cells cannot be stood on; arriving on the Destination completes the level (a sink).
-                    if (removed[x, y] || cell == destination)
+                    // Arriving on the Destination completes the level: it is a sink.
+                    if (cell == destination)
                     {
                         continue;
                     }
 
                     int from = x * n + y;
+                    bool fromRemoved = removed[x, y];
                     if (jump.TryGetValue(cell, out var to))
                     {
-                        if (maze.InBounds(to) && !removed[to.x, to.y])
+                        if (maze.InBounds(to))
                         {
-                            arcFrom.Add(from);
-                            arcTo.Add(to.x * n + to.y);
+                            int toIndex = to.x * n + to.y;
+                            optFrom.Add(from);
+                            optTo.Add(toIndex);
+                            if (!fromRemoved && !removed[to.x, to.y])
+                            {
+                                pesFrom.Add(from);
+                                pesTo.Add(toIndex);
+                            }
                         }
 
                         continue;
@@ -121,40 +132,36 @@ namespace TrustNoWall.Core
                             continue;
                         }
 
-                        var next = cell + DirUtil.Delta(d);
-                        if (removed[next.x, next.y])
-                        {
-                            continue;
-                        }
-
                         var edge = Edge.Between(cell, d);
-                        if (blocked.Contains(edge))
-                        {
-                            continue;
-                        }
-
                         if (oneWay.TryGetValue(edge, out var allowed) && allowed != d)
                         {
                             continue;
                         }
 
-                        arcFrom.Add(from);
-                        arcTo.Add(next.x * n + next.y);
+                        var next = cell + DirUtil.Delta(d);
+                        int toIndex = next.x * n + next.y;
+                        optFrom.Add(from);
+                        optTo.Add(toIndex);
+                        if (!fromRemoved && !removed[next.x, next.y] && !blocked.Contains(edge))
+                        {
+                            pesFrom.Add(from);
+                            pesTo.Add(toIndex);
+                        }
                     }
                 }
             }
 
-            var reach = Flood(arcFrom, arcTo, start.x * n + start.y, count);
+            var reach = Flood(optFrom, optTo, start.x * n + start.y, count);
             int destIndex = destination.x * n + destination.y;
             if (!reach[destIndex])
             {
                 return false;
             }
 
-            var canReachDest = Flood(arcTo, arcFrom, destIndex, count);
+            var canReachDest = Flood(pesTo, pesFrom, destIndex, count);
             for (int i = 0; i < count; i++)
             {
-                if (reach[i] && !canReachDest[i])
+                if (reach[i] && !canReachDest[i] && !removed[i / n, i % n])
                 {
                     return false;
                 }

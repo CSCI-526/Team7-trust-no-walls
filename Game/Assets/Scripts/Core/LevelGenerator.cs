@@ -29,7 +29,7 @@ namespace TrustNoWall.Core
             var destination = MazeGenerator.Farthest(maze, start);
             if (level >= 4)
             {
-                MazeGenerator.Braid(maze, (int)(0.06 * n * n), rng);
+                MazeGenerator.Braid(maze, 6 * n * n / 100, rng); // floor(0.06 * N * N) in exact integer math
             }
 
             int interiorWalls = 0;

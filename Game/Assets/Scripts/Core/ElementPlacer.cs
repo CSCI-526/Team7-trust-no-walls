@@ -10,6 +10,8 @@ namespace TrustNoWall.Core
     /// Destination; one cell element per cell (patrol paths and teleporter targets count); one
     /// edge element per edge. Every element is validated with the solvability check right after
     /// placement and undone if it fails; each element gets up to <see cref="TriesPerElement"/> tries.
+    /// Extra rules: rotating gates and collapsing tiles never sit on an endpoint of a phase-wall or
+    /// moving-wall edge (and vice versa), and a trigger's linked edges never touch its plate.
     /// </summary>
     internal sealed class ElementPlacer
     {
@@ -34,6 +36,65 @@ namespace TrustNoWall.Core
             {
                 _excluded.Add(builder.Start + DirUtil.Delta(d));
             }
+
+            // Account for elements already on the builder (hand-built tests).
+            foreach (var x in builder.MemoryTiles) _occupied.Add(x.Cell);
+            foreach (var x in builder.CollapseTiles) _occupied.Add(x.Cell);
+            foreach (var x in builder.TriggerPlates)
+            {
+                _occupied.Add(x.Plate);
+                foreach (var e in x.LinkedEdges()) { _elementEdges.Add(e); _triggerEdges.Add(e); }
+            }
+
+            foreach (var x in builder.Teleporters) { _occupied.Add(x.Pad); _occupied.Add(x.Target); }
+            foreach (var x in builder.RotatingGates) _occupied.Add(x.Cell);
+            foreach (var x in builder.Patrols) foreach (var c in x.Path) _occupied.Add(c);
+            foreach (var x in builder.Decoys) _occupied.Add(x.Cell);
+            foreach (var x in builder.InvisibleWalls) _elementEdges.Add(x.Edge);
+            foreach (var x in builder.PhaseWalls) _elementEdges.Add(x.Edge);
+            foreach (var x in builder.OneWays) _elementEdges.Add(x.Edge);
+            foreach (var x in builder.MovingWalls) { _elementEdges.Add(x.A); _elementEdges.Add(x.B); }
+        }
+
+        /// <summary>
+        /// True if a rotating gate or collapsing tile may go on <paramref name="c"/>: the cell is free
+        /// and is not an endpoint of any phase-wall or moving-wall edge. Two periodic constraints on
+        /// one crossing can have windows that never line up (same 5 s cycles), so they are kept apart.
+        /// </summary>
+        internal bool CanHostCellHazard(Vector2Int c)
+        {
+            if (!IsFreeCell(c))
+            {
+                return false;
+            }
+
+            foreach (var w in _b.PhaseWalls)
+            {
+                if (w.Edge.A == c || w.Edge.B == c) return false;
+            }
+
+            foreach (var w in _b.MovingWalls)
+            {
+                if (w.A.A == c || w.A.B == c || w.B.A == c || w.B.B == c) return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>True if a phase wall or moving-wall position may use <paramref name="e"/>: it touches no gate or collapsing tile.</summary>
+        internal bool CanHostPeriodicEdge(Edge e)
+        {
+            foreach (var g in _b.RotatingGates)
+            {
+                if (g.Cell == e.A || g.Cell == e.B) return false;
+            }
+
+            foreach (var c in _b.CollapseTiles)
+            {
+                if (c.Cell == e.A || c.Cell == e.B) return false;
+            }
+
+            return true;
         }
 
         /// <summary>Places up to <paramref name="count"/> elements of <paramref name="m"/>; returns how many were placed.</summary>
@@ -191,9 +252,9 @@ namespace TrustNoWall.Core
             for (int j = 0; j < links; j++)
             {
                 bool wantOpens = _rng.Next(2) == 0;
-                if (!(wantOpens ? TryPickOpens(opens, closes) : TryPickCloses(opens, closes)))
+                if (!(wantOpens ? TryPickOpens(plate, opens, closes) : TryPickCloses(plate, opens, closes)))
                 {
-                    if (!(wantOpens ? TryPickCloses(opens, closes) : TryPickOpens(opens, closes)))
+                    if (!(wantOpens ? TryPickCloses(plate, opens, closes) : TryPickOpens(plate, opens, closes)))
                     {
                         break;
                     }
@@ -223,11 +284,12 @@ namespace TrustNoWall.Core
                 });
         }
 
-        // "Opens" edges are interior (static) walls: hidden corridors revealed by the plate.
-        private bool TryPickOpens(List<Edge> opens, List<Edge> closes)
+        // Linked edges never touch the plate cell itself (entering the plate would toggle the edge
+        // being crossed). "Opens" edges are interior (static) walls: hidden corridors revealed by the plate.
+        private bool TryPickOpens(Vector2Int plate, List<Edge> opens, List<Edge> closes)
         {
             var walls = FreeStaticWalls();
-            walls.RemoveAll(e => opens.Contains(e) || closes.Contains(e));
+            walls.RemoveAll(e => e.A == plate || e.B == plate || opens.Contains(e) || closes.Contains(e));
             if (walls.Count == 0)
             {
                 return false;
@@ -238,10 +300,10 @@ namespace TrustNoWall.Core
         }
 
         // "Closes" edges are open passages that are not bridges (with other trigger edges closed).
-        private bool TryPickCloses(List<Edge> opens, List<Edge> closes)
+        private bool TryPickCloses(Vector2Int plate, List<Edge> opens, List<Edge> closes)
         {
             var passages = FreePassages();
-            passages.RemoveAll(e => opens.Contains(e) || closes.Contains(e));
+            passages.RemoveAll(e => e.A == plate || e.B == plate || opens.Contains(e) || closes.Contains(e));
             if (passages.Count == 0)
             {
                 return false;
@@ -363,7 +425,8 @@ namespace TrustNoWall.Core
 
             var a = Edge.Between(middle, first);
             var b = Edge.Between(middle, second);
-            if (IsFreeEdge(a) && IsFreeEdge(b) && IsPassage(a) && IsPassage(b))
+            if (IsFreeEdge(a) && IsFreeEdge(b) && IsPassage(a) && IsPassage(b)
+                && CanHostPeriodicEdge(a) && CanHostPeriodicEdge(b))
             {
                 options.Add((a, b));
             }
@@ -377,7 +440,7 @@ namespace TrustNoWall.Core
             var options = new List<Edge>();
             foreach (var e in MazeAnalysis.PathEdges(route))
             {
-                if (IsFreeEdge(e) && IsPassage(e))
+                if (IsFreeEdge(e) && IsPassage(e) && CanHostPeriodicEdge(e))
                 {
                     options.Add(e);
                 }
@@ -398,6 +461,7 @@ namespace TrustNoWall.Core
         private bool TryBasePhaseWall()
         {
             var walls = FreeStaticWalls();
+            walls.RemoveAll(e => !CanHostPeriodicEdge(e));
             if (walls.Count == 0)
             {
                 return false;
@@ -456,6 +520,7 @@ namespace TrustNoWall.Core
         private bool TryCollapseTile(bool permanent)
         {
             var cells = FreeCells();
+            cells.RemoveAll(c => !CanHostCellHazard(c));
             if (cells.Count == 0)
             {
                 return false;
@@ -488,6 +553,7 @@ namespace TrustNoWall.Core
         private bool TryGate()
         {
             var cells = FreeCells();
+            cells.RemoveAll(c => !CanHostCellHazard(c));
             if (cells.Count == 0)
             {
                 return false;

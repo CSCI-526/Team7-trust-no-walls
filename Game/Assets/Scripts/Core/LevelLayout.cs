@@ -44,6 +44,10 @@ namespace TrustNoWall.Core
         public int Level { get; }
         public int N { get; }
         public int Seed { get; }
+        /// <summary>
+        /// The static walls. Exposed as the mutable <see cref="Core.Maze"/> type for convenience, but it
+        /// must never be mutated after the layout is built (the builder hands over its own clone).
+        /// </summary>
         public Maze Maze { get; }
         public Vector2Int Start { get; }
         public Vector2Int Destination { get; }

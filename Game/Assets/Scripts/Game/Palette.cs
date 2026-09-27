@@ -23,8 +23,8 @@ namespace TrustNoWall.Game
         public static readonly Color CrackLine = MechanicInfo.Hex(0x0A0B10);
 
         /// <summary>
-        /// Trigger plate colors in the order plates use them. <see cref="TriggerColorsFor"/> drops the
-        /// ones that would clash with another mechanic present in the level.
+        /// Trigger plate colors in the order plates use them. <see cref="TriggerPaletteIndices"/> picks the
+        /// ones a level uses.
         /// </summary>
         public static readonly Color[] TriggerColors =
         {
@@ -34,32 +34,54 @@ namespace TrustNoWall.Game
         };
 
         /// <summary>
-        /// The trigger colors usable in <paramref name="layout"/>: no orange next to moving walls
-        /// (also orange) and no purple next to teleporters (also purple). Green always remains.
+        /// Indices into <see cref="TriggerColors"/> that trigger plates use, in plate order. Prefers
+        /// the colors that do not clash with the level's other mechanics (no orange next to moving
+        /// walls, no purple next to teleporters); if the level has more plates than that subset
+        /// holds, falls back to the full palette so distinct plates keep distinct colors.
         /// </summary>
-        public static Color[] TriggerColorsFor(LevelLayout layout)
+        public static int[] TriggerPaletteIndices(int plateCount, bool movingWalls, bool teleporters)
         {
-            bool moving = layout.MovingWalls.Count > 0;
-            bool teleport = layout.Teleporters.Count > 0;
-            var colors = new System.Collections.Generic.List<Color>(3);
-            if (!teleport)
+            var subset = new System.Collections.Generic.List<int>(3);
+            if (!teleporters)
             {
-                colors.Add(TriggerColors[0]);
+                subset.Add(0);
             }
 
-            colors.Add(TriggerColors[1]);
-            if (!moving)
+            subset.Add(1);
+            if (!movingWalls)
             {
-                colors.Add(TriggerColors[2]);
+                subset.Add(2);
             }
 
-            return colors.ToArray();
+            return plateCount > subset.Count ? new[] { 0, 1, 2 } : subset.ToArray();
         }
 
-        /// <summary>The color that represents <paramref name="m"/> in this level's HUD legend and intro card.</summary>
+        /// <summary>The color of <paramref name="plate"/> and its linked walls in <paramref name="layout"/>.</summary>
+        public static Color TriggerPlateColor(TriggerPlate plate, LevelLayout layout)
+        {
+            return TriggerColorFor(plate.ColorIndex, layout);
+        }
+
+        private static Color TriggerColorFor(int colorIndex, LevelLayout layout)
+        {
+            int[] indices = TriggerPaletteIndices(layout.TriggerPlates.Count, layout.MovingWalls.Count > 0, layout.Teleporters.Count > 0);
+            return TriggerColors[indices[colorIndex % indices.Length]];
+        }
+
+        /// <summary>
+        /// The color that represents <paramref name="m"/> in this level's HUD legend and intro card;
+        /// for trigger walls it is the first plate's actual color.
+        /// </summary>
         public static Color MechanicColor(Mechanic m, LevelLayout layout)
         {
-            return m == Mechanic.TriggerWalls ? TriggerColorsFor(layout)[0] : MechanicInfo.Get(m).Color;
+            if (m != Mechanic.TriggerWalls)
+            {
+                return MechanicInfo.Get(m).Color;
+            }
+
+            return layout.TriggerPlates.Count > 0
+                ? TriggerPlateColor(layout.TriggerPlates[0], layout)
+                : TriggerColorFor(0, layout);
         }
 
         public static readonly Color TeleporterPad = MechanicInfo.Hex(0xC04DFF);

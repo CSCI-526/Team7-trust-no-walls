@@ -1,6 +1,6 @@
 # Trust No Wall
 
-**Gameplay video:** https://github.com/CSCI-526/Team7-trust-no-walls/blob/main/video/trust-no-wall-gameplay.mp4
+**Gameplay video:** https://drive.google.com/file/d/108_E55riLKDuFTiWyroH48iHKu0jDZD_/view?usp=sharing
 **Descriptive document:** https://github.com/CSCI-526/Team7-trust-no-walls/blob/main/design/DesignDocument.md
 **Play online:** https://csci-526.github.io/Team7-trust-no-walls/
 

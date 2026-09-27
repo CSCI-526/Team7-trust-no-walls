@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "design" / "Trust-No-Wall-Descriptive-Document.docx"
 REPO = "https://github.com/CSCI-526/Team7-trust-no-walls"
 PLAY = "https://csci-526.github.io/Team7-trust-no-walls/"
-VIDEO = sys.argv[1] if len(sys.argv) > 1 else "[Gameplay video link: to be added]"
+VIDEO = sys.argv[1] if len(sys.argv) > 1 else "https://drive.google.com/file/d/108_E55riLKDuFTiWyroH48iHKu0jDZD_/view?usp=sharing"
 
 doc = Document()
 style = doc.styles["Normal"]

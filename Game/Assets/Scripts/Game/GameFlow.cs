@@ -214,6 +214,12 @@ namespace TrustNoWall.Game
 
         private void TickDying()
         {
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                RestartAttempt();
+                return;
+            }
+
             _dyingTimer += Time.deltaTime;
             if (_dyingTimer >= DyingDuration)
             {

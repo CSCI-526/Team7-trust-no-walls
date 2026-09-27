@@ -132,5 +132,19 @@ namespace TrustNoWall.Core
         {
             return (CellCenter(A, n) + CellCenter(B, n)) / 2f;
         }
+
+        /// <summary>
+        /// Chebyshev distance from this edge to <paramref name="cell"/>: the closer of its two
+        /// endpoints. The single shared rule for "is this edge within range of that cell", used by
+        /// both memory tile reveal (<see cref="LevelSim"/>) and memory tile placement
+        /// (<see cref="ElementPlacer"/>) so the two can never disagree, and by warning proximity.
+        /// </summary>
+        public int ChebyshevDistanceTo(Vector2Int cell)
+        {
+            return Math.Min(Chebyshev(A, cell), Chebyshev(B, cell));
+        }
+
+        private static int Chebyshev(Vector2Int a, Vector2Int b) =>
+            Math.Max(Math.Abs(a.x - b.x), Math.Abs(a.y - b.y));
     }
 }

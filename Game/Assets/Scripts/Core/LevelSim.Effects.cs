@@ -155,7 +155,7 @@ namespace TrustNoWall.Core
         {
             foreach (var iw in Layout.InvisibleWalls)
             {
-                if (EdgeDistance(iw.Edge, tile.Cell) <= MemoryTile.RevealRadius)
+                if (iw.Edge.ChebyshevDistanceTo(tile.Cell) <= MemoryTile.RevealRadius)
                 {
                     _memoryExpiry[iw.Edge] = Time + MemoryTile.RevealDuration;
                 }
@@ -203,18 +203,12 @@ namespace TrustNoWall.Core
                 return;
             }
 
-            if (EdgeDistance(edge, PlayerCell) <= WarningRadius)
+            if (edge.ChebyshevDistanceTo(PlayerCell) <= WarningRadius)
             {
                 _warned[element] = true;
                 _events.Add(new SimEvent(SimEventKind.Warning, edge.A, string.Empty));
             }
         }
-
-        private static int Chebyshev(Vector2Int a, Vector2Int b) =>
-            Mathf.Max(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
-
-        private static int EdgeDistance(Edge e, Vector2Int cell) =>
-            Mathf.Min(Chebyshev(e.A, cell), Chebyshev(e.B, cell));
 
         /// <summary>
         /// Test-only hook: forces a trigger-linked edge's open/closed state directly, bypassing plate

@@ -208,8 +208,16 @@ namespace TrustNoWall.Tests
                     }
 
                     int plan = LevelPlan.CountFor(m, l.N, w, LevelPlan.IsHalf(m, l.Level));
+                    if (m == Mechanic.MemoryTiles)
+                    {
+                        // Extra memory tiles are added beyond the plan until every invisible wall
+                        // is within reveal range of one; the plan is a floor, not a ceiling.
+                        Assert.GreaterOrEqual(count, plan, id + " at least planned " + m);
+                        continue;
+                    }
+
                     Assert.LessOrEqual(count, plan, id + " " + m);
-                    if (m == Mechanic.InvisibleWalls || m == Mechanic.MemoryTiles || m == Mechanic.Chaser)
+                    if (m == Mechanic.Chaser)
                     {
                         Assert.AreEqual(plan, count, id + " exact " + m);
                     }

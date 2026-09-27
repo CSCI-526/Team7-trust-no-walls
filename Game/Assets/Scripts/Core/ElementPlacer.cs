@@ -111,7 +111,7 @@ namespace TrustNoWall.Core
                     return Repeat(count - onBase, _ => TryRoutePhaseWall()) + Repeat(onBase, _ => TryBasePhaseWall());
                 }
                 case Mechanic.InvisibleWalls: return Repeat(count, _ => TryInvisibleWall());
-                case Mechanic.MemoryTiles: return Repeat(count, _ => TryMemoryTile());
+                case Mechanic.MemoryTiles: return PlaceMemoryTiles(count);
                 case Mechanic.CollapsingTiles: return Repeat(count, i => TryCollapseTile(i % 2 == 1));
                 case Mechanic.Teleporters: return Repeat(count, _ => TryTeleporter());
                 case Mechanic.RotatingBarriers: return Repeat(count, _ => TryGate());
@@ -518,29 +518,158 @@ namespace TrustNoWall.Core
                 () => { _elementEdges.Remove(edge); _b.InvisibleWalls.Remove(element); });
         }
 
-        private bool TryMemoryTile()
+        /// <summary>
+        /// Places at least <paramref name="plannedCount"/> memory tiles: the plan's count first
+        /// (greedy set cover, preferring cells that would reveal the most invisible walls not yet
+        /// covered by any placed tile), then keeps adding tiles beyond the plan until every
+        /// invisible wall is within <see cref="MemoryTile.RevealRadius"/> of one (the same
+        /// <see cref="Edge.ChebyshevDistanceTo"/> rule <c>RevealMemory</c> uses, so placement and
+        /// reveal can never disagree). Any invisible wall that no legal cell can cover is demoted
+        /// back to an ordinary (non-invisible) wall.
+        /// </summary>
+        private int PlaceMemoryTiles(int plannedCount)
         {
-            var cells = FreeCells();
-            if (cells.Count == 0)
+            int placed = 0;
+            for (int i = 0; i < plannedCount; i++)
+            {
+                if (!TryPlaceOneMemoryTile(allowZeroCoverage: true))
+                {
+                    break;
+                }
+
+                placed++;
+            }
+
+            int guard = 0;
+            int maxExtra = _maze.N * _maze.N;
+            while (!AllInvisibleWallsCovered() && guard < maxExtra)
+            {
+                guard++;
+                if (!TryPlaceOneMemoryTile(allowZeroCoverage: false))
+                {
+                    break;
+                }
+
+                placed++;
+            }
+
+            RemoveUncoverableInvisibleWalls();
+            return placed;
+        }
+
+        /// <summary>
+        /// Places one memory tile, preferring the free cell(s) that would cover the most
+        /// currently-uncovered invisible walls, trying the next-best candidate whenever the top
+        /// pick fails placement rules or solvability. When <paramref name="allowZeroCoverage"/> is
+        /// true and no free cell covers anything new, falls back to any free cell.
+        /// </summary>
+        private bool TryPlaceOneMemoryTile(bool allowZeroCoverage)
+        {
+            var remaining = FreeCells();
+            if (remaining.Count == 0)
             {
                 return false;
             }
 
-            // Prefer tiles that would actually reveal something.
-            var useful = cells.FindAll(c => _b.InvisibleWalls.Exists(w => Near(c, w.Edge, MemoryTile.RevealRadius)));
-            var cell = Pick(useful.Count > 0 ? useful : cells);
-            var element = new MemoryTile(cell);
-            return Commit(
-                () => { Occupy(cell); _b.MemoryTiles.Add(element); },
-                () => { Release(cell); _b.MemoryTiles.Remove(element); });
+            // The set of walls a new tile could still usefully cover doesn't change until one is
+            // actually committed, so it is computed once per call rather than per candidate cell.
+            var uncovered = _b.InvisibleWalls.FindAll(iw => !IsCovered(iw));
+
+            while (remaining.Count > 0)
+            {
+                int bestCoverage = -1;
+                var best = new List<Vector2Int>();
+                foreach (var c in remaining)
+                {
+                    int coverage = CoverageCount(c, uncovered);
+                    if (coverage > bestCoverage)
+                    {
+                        bestCoverage = coverage;
+                        best.Clear();
+                        best.Add(c);
+                    }
+                    else if (coverage == bestCoverage)
+                    {
+                        best.Add(c);
+                    }
+                }
+
+                if (bestCoverage <= 0 && !allowZeroCoverage)
+                {
+                    return false;
+                }
+
+                var cell = Pick(best);
+                remaining.Remove(cell);
+
+                var element = new MemoryTile(cell);
+                if (Commit(
+                    () => { Occupy(cell); _b.MemoryTiles.Add(element); },
+                    () => { Release(cell); _b.MemoryTiles.Remove(element); }))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        private static bool Near(Vector2Int c, Edge e, int radius)
+        /// <summary>Number of <paramref name="uncovered"/> invisible walls a memory tile at <paramref name="c"/> would reveal.</summary>
+        private static int CoverageCount(Vector2Int c, List<InvisibleWall> uncovered)
         {
-            return Chebyshev(c, e.A) <= radius && Chebyshev(c, e.B) <= radius;
+            int n = 0;
+            foreach (var iw in uncovered)
+            {
+                if (iw.Edge.ChebyshevDistanceTo(c) <= MemoryTile.RevealRadius)
+                {
+                    n++;
+                }
+            }
+
+            return n;
         }
 
-        private static int Chebyshev(Vector2Int a, Vector2Int b) => Math.Max(Math.Abs(a.x - b.x), Math.Abs(a.y - b.y));
+        /// <summary>True if some already-placed memory tile is within reveal range of <paramref name="iw"/>.</summary>
+        private bool IsCovered(InvisibleWall iw)
+        {
+            foreach (var tile in _b.MemoryTiles)
+            {
+                if (iw.Edge.ChebyshevDistanceTo(tile.Cell) <= MemoryTile.RevealRadius)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool AllInvisibleWallsCovered()
+        {
+            foreach (var iw in _b.InvisibleWalls)
+            {
+                if (!IsCovered(iw))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Demotes every invisible wall that no legal memory tile placement could cover: it stays
+        /// solid in the maze (an ordinary wall), it just leaves the invisible-wall list and its
+        /// element-edge reservation, so nothing renders or treats it as invisible any more.
+        /// </summary>
+        private void RemoveUncoverableInvisibleWalls()
+        {
+            var uncovered = _b.InvisibleWalls.FindAll(iw => !IsCovered(iw));
+            foreach (var iw in uncovered)
+            {
+                _b.InvisibleWalls.Remove(iw);
+                _elementEdges.Remove(iw.Edge);
+            }
+        }
 
         // ---------------------------------------------------------------- cell hazards
 

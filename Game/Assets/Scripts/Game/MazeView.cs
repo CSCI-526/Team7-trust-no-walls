@@ -281,9 +281,10 @@ namespace TrustNoWall.Game
 
         private void BuildTriggerPlates(LevelLayout layout, LevelSim sim)
         {
+            Color[] colors = Palette.TriggerColorsFor(layout);
             foreach (var plate in layout.TriggerPlates)
             {
-                Color color = Palette.TriggerColors[plate.ColorIndex % Palette.TriggerColors.Length];
+                Color color = colors[plate.ColorIndex % colors.Length];
 
                 var plateSprite = CreateSprite(SpriteFactory.Plate, color, PadOrder, _root);
                 plateSprite.transform.position = Edge.CellCenter(plate.Plate, _n);

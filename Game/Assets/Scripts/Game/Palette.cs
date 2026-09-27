@@ -22,12 +22,45 @@ namespace TrustNoWall.Game
         public static readonly Color PitRim = MechanicInfo.Hex(0x000000);
         public static readonly Color CrackLine = MechanicInfo.Hex(0x0A0B10);
 
+        /// <summary>
+        /// Trigger plate colors in the order plates use them. <see cref="TriggerColorsFor"/> drops the
+        /// ones that would clash with another mechanic present in the level.
+        /// </summary>
         public static readonly Color[] TriggerColors =
         {
-            MechanicInfo.Hex(0xFF8C42),
             MechanicInfo.Hex(0xB084F5),
             MechanicInfo.Hex(0x3DDC84),
+            MechanicInfo.Hex(0xFF8C42),
         };
+
+        /// <summary>
+        /// The trigger colors usable in <paramref name="layout"/>: no orange next to moving walls
+        /// (also orange) and no purple next to teleporters (also purple). Green always remains.
+        /// </summary>
+        public static Color[] TriggerColorsFor(LevelLayout layout)
+        {
+            bool moving = layout.MovingWalls.Count > 0;
+            bool teleport = layout.Teleporters.Count > 0;
+            var colors = new System.Collections.Generic.List<Color>(3);
+            if (!teleport)
+            {
+                colors.Add(TriggerColors[0]);
+            }
+
+            colors.Add(TriggerColors[1]);
+            if (!moving)
+            {
+                colors.Add(TriggerColors[2]);
+            }
+
+            return colors.ToArray();
+        }
+
+        /// <summary>The color that represents <paramref name="m"/> in this level's HUD legend and intro card.</summary>
+        public static Color MechanicColor(Mechanic m, LevelLayout layout)
+        {
+            return m == Mechanic.TriggerWalls ? TriggerColorsFor(layout)[0] : MechanicInfo.Get(m).Color;
+        }
 
         public static readonly Color TeleporterPad = MechanicInfo.Hex(0xC04DFF);
         public static readonly Color GateBar = MechanicInfo.Hex(0xFFB199);

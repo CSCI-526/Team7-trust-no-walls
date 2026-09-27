@@ -276,6 +276,7 @@ namespace TrustNoWall.Game
             _playerView.Attach(_sim);
             CameraFit.Apply(_camera, _cameraRig, layout.N);
             LevelDeaths = 0;
+            Debug.Log("Level " + level + " start (" + layout.N + " x " + layout.N + ")");
 
             if (layout.NewMechanics.Count > 0)
             {
@@ -292,6 +293,7 @@ namespace TrustNoWall.Game
         {
             DeathCause = _sim.DeathCause;
             LevelDeaths++;
+            Debug.Log("Death: " + DeathCause + " (level " + CurrentLevel + ")");
             _dyingTimer = 0f;
             CurrentState = State.Dying;
             _playerView.TriggerDeath();
@@ -303,6 +305,7 @@ namespace TrustNoWall.Game
         {
             _completeTimer = 0f;
             CurrentState = State.LevelComplete;
+            Debug.Log("Level " + CurrentLevel + " complete");
             _effects.Burst(WorldCenter(_sim.Layout.Destination), Palette.Destination, 18, 4.5f, 0.6f, 0.2f);
             _sfx.PlayComplete();
 

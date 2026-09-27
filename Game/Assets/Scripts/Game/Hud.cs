@@ -169,7 +169,7 @@ namespace TrustNoWall.Game
             {
                 MechanicInfo info = MechanicInfo.Get(m);
                 float width = _legendStyle.CalcSize(new GUIContent(info.DisplayName)).x;
-                _legend.Add((info.DisplayName, info.Color, width));
+                _legend.Add((info.DisplayName, Palette.MechanicColor(m, layout), width));
             }
 
             _legendBuiltForLevel = _flow.CurrentLevel;
@@ -192,7 +192,7 @@ namespace TrustNoWall.Game
             for (int i = 0; i < count; i++)
             {
                 MechanicInfo info = MechanicInfo.Get(layout.NewMechanics[i]);
-                DrawShadowedLabel(new Rect(panel.x + 30f, y, panel.width - 60f, 30f), "NEW: " + info.DisplayName, _introNameStyle, info.Color);
+                DrawShadowedLabel(new Rect(panel.x + 30f, y, panel.width - 60f, 30f), "NEW: " + info.DisplayName, _introNameStyle, Readable(Palette.MechanicColor(layout.NewMechanics[i], layout)));
                 y += 32f;
                 DrawShadowedLabel(new Rect(panel.x + 40f, y, panel.width - 80f, 36f), info.Explanation, _introTextStyle, MutedColor);
                 y += 44f;
@@ -265,6 +265,13 @@ namespace TrustNoWall.Game
                 "Press SPACE to start",
                 _promptStyle,
                 new Color(1f, 1f, 1f, pulse));
+        }
+
+        /// <summary>Lifts dark mechanic colors (the chaser's purple) so intro titles stay legible.</summary>
+        private static Color Readable(Color c)
+        {
+            float luminance = (0.299f * c.r) + (0.587f * c.g) + (0.114f * c.b);
+            return luminance < 0.45f ? Color.Lerp(c, Color.white, 0.35f) : c;
         }
 
         private static string FormatTime(float seconds)

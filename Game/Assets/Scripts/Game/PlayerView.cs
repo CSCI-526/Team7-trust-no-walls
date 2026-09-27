@@ -27,12 +27,23 @@ namespace TrustNoWall.Game
             _body = CreateChild("Body", SpriteFactory.Blob, Palette.Player, 10, transform, 1f);
             _eyeL = CreateChild("EyeL", SpriteFactory.Eye, Color.black, 11, transform, 0.32f);
             _eyeR = CreateChild("EyeR", SpriteFactory.Eye, Color.black, 11, transform, 0.32f);
+
+            // Hidden until the first level attaches, so the blob does not sit behind the title.
+            SetVisible(false);
+        }
+
+        private void SetVisible(bool visible)
+        {
+            _body.enabled = visible;
+            _eyeL.enabled = visible;
+            _eyeR.enabled = visible;
         }
 
         /// <summary>Rebinds this view to a fresh attempt (new sim or a reset one) and snaps to Start.</summary>
         public void Attach(LevelSim sim)
         {
             _sim = sim;
+            SetVisible(true);
             _dying = false;
             _deathTimer = 0f;
             transform.localScale = Vector3.one;

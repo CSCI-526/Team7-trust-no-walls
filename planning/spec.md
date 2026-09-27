@@ -15,7 +15,7 @@ This spec fills every gap in the brief with the team's recommended defaults. It 
 - Cells `(x, y)`, `0 <= x, y < N`, y up. Cell size 1 world unit; maze centered at the origin.
 - Walls live on edges between adjacent cells. The outer boundary is always a solid visible wall.
 - Base maze: a perfect maze from a seeded recursive backtracker (iterative DFS). From level 4 on, braid it: remove `floor(0.06 * N * N)` extra random interior walls to create loops.
-- Start = cell (0, 0). Destination = the cell with the greatest BFS distance from Start in the base (pre-braid) maze; ties broken by lowest index.
+- Start = cell (0, 0). Destination is chosen after braiding: the cell with the greatest BFS distance from Start in the braided maze among cells whose Manhattan distance from Start is at least `N - 1` (ties broken by lowest x, then lowest y); if none qualify, the cell farthest from Start in the braided maze.
 - Levels are generated from `seed = runSeed * 1000 + L` (runSeed random per title-screen start). Dying restarts the SAME layout (the brief's "memory" pillar): all dynamic state resets, the layout does not change.
 
 ## Player movement

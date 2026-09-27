@@ -246,6 +246,28 @@ namespace TrustNoWall.Tests
         }
 
         [Test]
+        public void Destination_IsAtLeastNMinusOneStepsFromStart()
+        {
+            long total = 0;
+            long totalTarget = 0;
+            int count = 0;
+            for (int level = 1; level <= 15; level++)
+            {
+                for (int seed = 1; seed <= 20; seed++)
+                {
+                    var l = LevelGenerator.Generate(level, seed);
+                    int steps = MazeGenerator.ShortestPath(l.Maze, l.Start, l.Destination).Count - 1;
+                    Assert.GreaterOrEqual(steps, l.N - 1, $"level {level} seed {seed}: Start to Destination is {steps} steps");
+                    total += steps;
+                    totalTarget += 2 * l.N - 2;
+                    count++;
+                }
+            }
+
+            UnityEngine.Debug.Log($"E2E|DEST avg path {(double)total / count:F2}, avg 2N-2 {(double)totalTarget / count:F2}, ratio {(double)total / totalTarget:F3}");
+        }
+
+        [Test]
         public void PlacementRules_Hold()
         {
             foreach (var kv in All())

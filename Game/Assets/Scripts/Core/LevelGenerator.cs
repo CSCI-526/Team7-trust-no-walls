@@ -26,11 +26,14 @@ namespace TrustNoWall.Core
             int n = level + 3;
             var maze = MazeGenerator.GeneratePerfect(n, rng);
             var start = new Vector2Int(0, 0);
-            var destination = MazeGenerator.Farthest(maze, start);
             if (level >= 4)
             {
                 MazeGenerator.Braid(maze, 6 * n * n / 100, rng); // floor(0.06 * N * N) in exact integer math
             }
+
+            // Chosen after braiding, and at least N - 1 cells away by Manhattan distance, so the
+            // loops braiding adds cannot turn the level into a short hop.
+            var destination = MazeGenerator.FarthestAtLeast(maze, start, n - 1);
 
             int interiorWalls = 0;
             foreach (var unused in maze.InteriorWalls())

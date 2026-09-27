@@ -159,6 +159,34 @@ namespace TrustNoWall.Core
         }
 
         /// <summary>
+        /// The cell with the greatest BFS distance from <paramref name="from"/> among cells whose
+        /// Manhattan distance from it is at least <paramref name="minManhattan"/> (ties: lowest x,
+        /// then lowest y). Falls back to <see cref="Farthest"/> if no reachable cell qualifies.
+        /// </summary>
+        public static Vector2Int FarthestAtLeast(Maze m, Vector2Int from, int minManhattan)
+        {
+            var dist = Distances(m, from);
+            int n = m.N;
+
+            var best = from;
+            int bestDist = -1;
+            for (int x = 0; x < n; x++)
+            {
+                for (int y = 0; y < n; y++)
+                {
+                    int manhattan = Mathf.Abs(x - from.x) + Mathf.Abs(y - from.y);
+                    if (manhattan >= minManhattan && dist[x, y] > bestDist)
+                    {
+                        bestDist = dist[x, y];
+                        best = new Vector2Int(x, y);
+                    }
+                }
+            }
+
+            return bestDist > 0 ? best : Farthest(m, from);
+        }
+
+        /// <summary>
         /// The shortest path from <paramref name="a"/> to <paramref name="b"/> through open
         /// edges, including both endpoints, or an empty list if <paramref name="b"/> is
         /// unreachable from <paramref name="a"/>.

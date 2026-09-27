@@ -102,6 +102,8 @@ namespace TrustNoWall.Core
                     _triggerOpen[e] = true;
                 }
             }
+
+            ResetHazards();
         }
 
         /// <summary>The player's current interpolated world position (idle: cell center; moving: lerp from -> to).</summary>
@@ -164,7 +166,7 @@ namespace TrustNoWall.Core
             {
                 if (!IsMoving)
                 {
-                    if (!held.HasValue || BumpTimer > 0f)
+                    if (!held.HasValue || BumpTimer > 0f || _teleportPending)
                     {
                         break;
                     }

@@ -46,12 +46,18 @@ namespace TrustNoWall.Core
         }
 
         /// <summary>
-        /// Runs the effects of fully arriving in <paramref name="cell"/>. Task 4 handles trigger
-        /// plates, memory tiles and the destination; Task 5 will add collapsing tiles, teleporters
-        /// and decoys here.
+        /// Runs the effects of fully arriving in <paramref name="cell"/>: trigger plates, memory
+        /// tiles, collapsing tiles (starts the crack timer), teleporters (starts the delay),
+        /// decoys (sends the player back to Start) and the destination. Also feeds the chaser's
+        /// trail (see LevelSim.Hazards.cs).
         /// </summary>
         private void OnEnteredCell(Vector2Int cell)
         {
+            if (Layout.HasChaser)
+            {
+                AppendToTrail(cell);
+            }
+
             var plate = Layout.TriggerPlateAt(cell);
             if (plate != null)
             {
@@ -64,16 +70,70 @@ namespace TrustNoWall.Core
                 RevealMemory(memory);
             }
 
+            var collapseTile = Layout.CollapseTileAt(cell);
+            if (collapseTile != null)
+            {
+                StartCrack(cell);
+            }
+
+            var teleporter = Layout.TeleporterAt(cell);
+            if (teleporter != null)
+            {
+                BeginTeleport(teleporter);
+            }
+
+            if (IsDecoyActive(cell))
+            {
+                TriggerDecoy(cell);
+                return; // player was sent back to Start; `cell` no longer applies
+            }
+
             if (Status == SimStatus.Playing && cell == Layout.Destination)
             {
                 Complete();
             }
         }
 
-        /// <summary>Cell-based hazard checks that don't depend on the player just having arrived (Task 5: patrols, chaser).</summary>
+        /// <summary>
+        /// Cell-based hazard checks that don't depend on the player just having arrived: teleport
+        /// delay expiry, collapsing-tile timers and pits, patrol collision and the chaser (spawn,
+        /// movement, collision). Runs once per internal sub-step (see <see cref="MaxSubStepDt"/>).
+        /// </summary>
         private void CheckHazards()
         {
-            // Task 5 will add patrol and chaser collision checks here.
+            UpdateTeleport();
+            if (Status != SimStatus.Playing)
+            {
+                return;
+            }
+
+            UpdateCollapseTiles();
+            if (Status != SimStatus.Playing)
+            {
+                return;
+            }
+
+            CheckPitDeath();
+            if (Status != SimStatus.Playing)
+            {
+                return;
+            }
+
+            CheckPatrolCollision();
+            if (Status != SimStatus.Playing)
+            {
+                return;
+            }
+
+            UpdateChaser();
+            if (Status != SimStatus.Playing)
+            {
+                return;
+            }
+
+            CheckChaserCollision();
+
+            _prevPlayerOccupied = PlayerOccupiedCell;
         }
 
         private void ToggleTrigger(TriggerPlate plate)

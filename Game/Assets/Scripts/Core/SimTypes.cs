@@ -10,6 +10,18 @@ namespace TrustNoWall.Core
         Complete
     }
 
+    /// <summary>
+    /// The state of a collapsing tile. Cracking and Collapsed carry extra timing info via
+    /// <see cref="LevelSim.TileCrackProgress"/> and <see cref="LevelSim.TileRestoreRemaining"/>
+    /// respectively (both read 0 outside their matching state).
+    /// </summary>
+    public enum TileState
+    {
+        Intact,
+        Cracking,
+        Collapsed
+    }
+
     /// <summary>Every notable thing that can happen during a single <see cref="LevelSim.Step"/> call.</summary>
     public enum SimEventKind
     {

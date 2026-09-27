@@ -25,6 +25,15 @@ namespace TrustNoWall.Core
         /// <summary>Chebyshev radius (in cells) within which a warning event is raised.</summary>
         public const int WarningRadius = 4;
 
+        /// <summary>
+        /// The longest slice of time processed as one internal sub-step. <see cref="Step"/>
+        /// subdivides a larger dt (e.g. a frame hitch) into chunks of at most this size, advancing
+        /// <see cref="Time"/> and running movement, crush checks, arrival effects and hazard/warning
+        /// hooks per chunk, so a whole step can never start and finish (or a hazard's state change
+        /// go unnoticed) between two consecutive checks.
+        /// </summary>
+        public const float MaxSubStepDt = 0.02f;
+
         public LevelLayout Layout { get; }
 
         public float Time { get; private set; }
@@ -106,6 +115,12 @@ namespace TrustNoWall.Core
         /// currently-held movement direction (the caller resolves which key wins), or null. Returns
         /// the events raised this call; the list is cleared and reused each call. No-ops (returns an
         /// empty list) unless <see cref="Status"/> is <see cref="SimStatus.Playing"/>.
+        ///
+        /// Internally, <paramref name="dt"/> is subdivided into chunks of at most
+        /// <see cref="MaxSubStepDt"/> seconds so that movement, crush checks, arrival effects and
+        /// hazard/warning hooks all see a consistent, fine-grained <see cref="Time"/> even when the
+        /// caller passes a large dt. Events from every sub-step accumulate into the returned list;
+        /// processing stops as soon as <see cref="Status"/> leaves <see cref="SimStatus.Playing"/>.
         /// </summary>
         public IReadOnlyList<SimEvent> Step(float dt, Dir? held)
         {
@@ -115,11 +130,20 @@ namespace TrustNoWall.Core
                 return _events;
             }
 
-            Time += dt;
-            ProcessMovement(dt, held);
-
-            if (Status == SimStatus.Playing)
+            float remaining = dt;
+            while (remaining > 1e-9f && Status == SimStatus.Playing)
             {
+                float sub = Mathf.Min(remaining, MaxSubStepDt);
+                remaining -= sub;
+
+                Time += sub;
+                ProcessMovement(sub, held);
+
+                if (Status != SimStatus.Playing)
+                {
+                    break;
+                }
+
                 CheckHazards();
                 UpdateWarnings();
             }
@@ -153,23 +177,24 @@ namespace TrustNoWall.Core
                 }
                 else
                 {
-                    float remaining = (1f - MoveProgress) * StepDuration;
-                    float use = Mathf.Min(leftover, remaining);
+                    float remainingStep = (1f - MoveProgress) * StepDuration;
+                    float use = Mathf.Min(leftover, remainingStep);
                     MoveProgress += use / StepDuration;
                     leftover -= use;
                     PlayerOccupiedCell = MoveProgress < 0.5f ? MoveFrom : MoveTo;
 
+                    // Always check crush at the edge's state as of the moment this increment ends,
+                    // including the final increment that reaches completion: a wall that closes in
+                    // the last sliver of a crossing must still kill, not let the player arrive safely.
+                    CheckCrush();
+                    if (Status != SimStatus.Playing)
+                    {
+                        break;
+                    }
+
                     if (MoveProgress >= 1f - 1e-6f)
                     {
                         CompleteStep();
-                        if (Status != SimStatus.Playing)
-                        {
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        CheckCrush();
                         if (Status != SimStatus.Playing)
                         {
                             break;

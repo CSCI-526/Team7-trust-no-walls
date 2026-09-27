@@ -123,24 +123,29 @@ namespace TrustNoWall.Core
             }
         }
 
-        /// <summary>Emits at most one Warning event per warning window per element, only when the element's edge is close enough.</summary>
+        /// <summary>
+        /// Emits at most one Warning event per warning window per element, only once the element's
+        /// edge comes close enough. The window isn't latched just because it started while the
+        /// player was out of range: if the player walks into range later in the same window, it
+        /// still fires exactly once, on the first check that finds it in range.
+        /// </summary>
         private void UpdateWarningFor(object element, bool warningNow, Edge edge)
         {
-            bool alreadyWarned = _warned.TryGetValue(element, out var w) && w;
             if (!warningNow)
             {
                 _warned[element] = false;
                 return;
             }
 
+            bool alreadyWarned = _warned.TryGetValue(element, out var w) && w;
             if (alreadyWarned)
             {
                 return;
             }
 
-            _warned[element] = true;
             if (EdgeDistance(edge, PlayerCell) <= WarningRadius)
             {
+                _warned[element] = true;
                 _events.Add(new SimEvent(SimEventKind.Warning, edge.A, string.Empty));
             }
         }

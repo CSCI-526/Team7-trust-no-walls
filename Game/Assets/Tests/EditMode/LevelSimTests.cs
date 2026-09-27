@@ -281,6 +281,68 @@ namespace TrustNoWall.Tests
             Assert.IsTrue(events.Any(e => e.Kind == SimEventKind.Died && e.Text == "Crushed by a disappearing wall"));
         }
 
+        [Test]
+        public void Crush_LateInCrossing_StillDetected_OnFinalIncrement()
+        {
+            // The wall turns solid at t = 0.125s, inside the last sliver of a 0.13s crossing that
+            // starts at t = 0 (open). The increment that pushes MoveProgress to 1 must still see
+            // the wall solid and kill, rather than let CompleteStep run unchecked.
+            var edge = Edge.Between(new Vector2Int(0, 0), Dir.Right);
+            var wall = new PhaseWall(edge, 4.875f, onBaseWall: false);
+            var builder = SmallBuilder().Open(new Vector2Int(0, 0), Dir.Right).Add(wall);
+            var sim = new LevelSim(builder.Build());
+
+            var events = StepUntilStopped(sim, Dir.Right, 30);
+
+            Assert.AreEqual(SimStatus.Dead, sim.Status);
+            Assert.AreEqual("Crushed by a disappearing wall", sim.DeathCause);
+            Assert.IsTrue(events.Any(e => e.Kind == SimEventKind.Died && e.Text == "Crushed by a disappearing wall"));
+        }
+
+        // ---- Large dt is subdivided internally ----
+
+        [Test]
+        public void LargeDt_SubdividesInternally_MatchesManySmallSteps()
+        {
+            Vector2Int[] corridor =
+            {
+                new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(2, 0),
+                new Vector2Int(3, 0), new Vector2Int(4, 0), new Vector2Int(5, 0)
+            };
+
+            var simSmall = new LevelSim(new LevelLayoutBuilder(new Maze(10)).Carve(corridor).Build());
+            var simLarge = new LevelSim(new LevelLayoutBuilder(new Maze(10)).Carve(corridor).Build());
+
+            for (int i = 0; i < 30; i++)
+            {
+                simSmall.Step(Dt, Dir.Right); // 30 * 1/60 = 0.5s
+            }
+
+            simLarge.Step(0.5f, Dir.Right); // one frame-hitch-sized call
+
+            Assert.AreEqual(simSmall.PlayerCell, simLarge.PlayerCell);
+            Assert.AreEqual(simSmall.IsMoving, simLarge.IsMoving);
+            Assert.AreEqual(simSmall.MoveProgress, simLarge.MoveProgress, 1e-2f);
+        }
+
+        [Test]
+        public void LargeDt_StillDetectsCrush_ThatOldCodeWouldHaveMissed()
+        {
+            // Same fatal timing as Crush_LateInCrossing_StillDetected_OnFinalIncrement, but driven
+            // by one large dt: without internal subdivision this whole step (and several more)
+            // would run to completion between checks, in a single unblocked jump.
+            var edge = Edge.Between(new Vector2Int(0, 0), Dir.Right);
+            var wall = new PhaseWall(edge, 4.875f, onBaseWall: false);
+            var builder = SmallBuilder().Open(new Vector2Int(0, 0), Dir.Right).Add(wall);
+            var sim = new LevelSim(builder.Build());
+
+            var events = sim.Step(0.5f, Dir.Right);
+
+            Assert.AreEqual(SimStatus.Dead, sim.Status);
+            Assert.AreEqual("Crushed by a disappearing wall", sim.DeathCause);
+            Assert.IsTrue(events.Any(e => e.Kind == SimEventKind.Died && e.Text == "Crushed by a disappearing wall"));
+        }
+
         // ---- Trigger toggle and crush ----
 
         [Test]
@@ -395,6 +457,35 @@ namespace TrustNoWall.Tests
             sim.Step(1f, null); // t = 3.6, well past the first window (ends at 3.0)
             var nextWindow = sim.Step(2.75f, null); // t = 6.35, within [Dwell+Slide+... ] second dwell's warning band
             Assert.IsTrue(nextWindow.Any(e => e.Kind == SimEventKind.Warning));
+        }
+
+        [Test]
+        public void Warning_FiresWhenPlayerWalksIntoRange_MidWindow()
+        {
+            // Wall edge is Chebyshev 5 from Start (out of range) but Chebyshev 4 from the next
+            // cell over (in range). The warning window must not be latched by the first,
+            // out-of-range check: it should still fire once the player steps into range while the
+            // same window is still open.
+            var wallEdge = Edge.Between(new Vector2Int(5, 0), Dir.Right);
+            var wall = new MovingWall(wallEdge, Edge.Between(new Vector2Int(5, 0), Dir.Up), 0f);
+            var builder = SmallBuilder(8).Open(new Vector2Int(0, 0), Dir.Right).Add(wall);
+            var sim = new LevelSim(builder.Build());
+
+            // Enter the warning window (starts at t = 2.4) while still at Start, out of range.
+            var initial = sim.Step(2.45f, null);
+            Assert.IsFalse(initial.Any(e => e.Kind == SimEventKind.Warning), "out of range: no warning yet");
+
+            // Step to (1, 0) (Chebyshev 4 from the wall edge: now in range), still inside the
+            // window (ends at t = 3.0).
+            var moveEvents = new List<SimEvent>();
+            for (int i = 0; i < 15 && sim.PlayerCell != new Vector2Int(1, 0); i++)
+            {
+                moveEvents.AddRange(sim.Step(Dt, Dir.Right));
+            }
+
+            Assert.AreEqual(new Vector2Int(1, 0), sim.PlayerCell);
+            Assert.Less(sim.Time, 3.0f, "still inside the same warning window");
+            Assert.IsTrue(moveEvents.Any(e => e.Kind == SimEventKind.Warning), "warns once in range, mid-window");
         }
 
         // ---- Completion ----

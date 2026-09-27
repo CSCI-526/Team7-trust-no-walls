@@ -21,3 +21,4 @@ Game/*.userprefs
 .superpowers/
 Game/.vscode/
 tools/web/node_modules/
+.claude/worktrees/

@@ -160,6 +160,37 @@ namespace TrustNoWall.Core
             }
         }
 
+        /// <summary>The player's live loop-erased trail (read-only view, for the autopilot's chaser prediction).</summary>
+        internal IReadOnlyList<Vector2Int> Trail => _trail;
+
+        /// <summary>
+        /// The chaser's effective position along <see cref="Trail"/>, for planning: its trail index
+        /// while following, or (index of the trail cell it will rejoin) minus (cells left to retrace)
+        /// while retracing, so it may be negative. Before spawning it reads 0 with
+        /// <paramref name="legStart"/> = <see cref="ChaserSpawnAt"/>. <paramref name="legStart"/> is
+        /// the time its current leg began.
+        /// </summary>
+        internal int ChaserRouteIndex(out float legStart)
+        {
+            if (!_chaserSpawned)
+            {
+                legStart = ChaserSpawnAt;
+                return 0;
+            }
+
+            legStart = _chaserStepStart;
+            for (int back = 0; back < _chaserPath.Count; back++)
+            {
+                int ti = _trail.IndexOf(_chaserPath[_chaserPath.Count - 1 - back]);
+                if (ti >= 0)
+                {
+                    return ti - back;
+                }
+            }
+
+            return -_chaserPath.Count;
+        }
+
         /// <summary>True if the chaser's current cell (the last entry of <see cref="_chaserPath"/>) has fallen off the live trail.</summary>
         private bool ChaserIsRetracing() => _trail.IndexOf(_chaserPath[_chaserPath.Count - 1]) < 0;
 

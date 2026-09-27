@@ -22,6 +22,7 @@ namespace TrustNoWall.Game
         private static readonly Color MutedColor = new Color(0.85f, 0.86f, 0.92f, 1f);
         private static readonly Color TaglineColor = new Color(0.55f, 0.75f, 1f, 0.9f);
         private static readonly Color DeathRed = new Color(1f, 0.35f, 0.35f, 1f);
+        private static readonly Color DemoTagColor = new Color(0.75f, 0.2f, 0.95f, 0.85f);
 
         private static readonly string[] ControlLines =
         {
@@ -51,6 +52,7 @@ namespace TrustNoWall.Game
         private GUIStyle _legendStyle;
         private GUIStyle _introNameStyle;
         private GUIStyle _introTextStyle;
+        private GUIStyle _demoStyle;
 
         private int _legendBuiltForLevel = -1;
         private readonly List<(string name, Color color, float width)> _legend = new List<(string, Color, float)>();
@@ -80,6 +82,11 @@ namespace TrustNoWall.Game
             {
                 case GameFlow.State.Title:
                     DrawTitleScreen();
+                    if (_flow.DemoActive)
+                    {
+                        DrawDemoTag();
+                    }
+
                     break;
                 case GameFlow.State.IntroCard:
                     DrawIntroCard();
@@ -108,6 +115,18 @@ namespace TrustNoWall.Game
             DrawShadowedLabel(new Rect(RefWidth - 226f, 27f, 210f, 18f), "TIME " + FormatTime(_flow.TotalRunTime), _hudRightSubStyle, MutedColor);
 
             DrawLegend(layout);
+
+            if (_flow.DemoActive)
+            {
+                DrawDemoTag();
+            }
+        }
+
+        private void DrawDemoTag()
+        {
+            var rect = new Rect(RefWidth / 2f - 32f, 8f, 64f, 22f);
+            DrawRect(rect, DemoTagColor);
+            DrawShadowedLabel(rect, "DEMO", _demoStyle, Color.white);
         }
 
         private void DrawLegend(LevelLayout layout)
@@ -302,6 +321,7 @@ namespace TrustNoWall.Game
             _introNameStyle = NewStyle(22, FontStyle.Bold, TextAnchor.UpperCenter);
             _introTextStyle = NewStyle(15, FontStyle.Normal, TextAnchor.UpperCenter);
             _introTextStyle.wordWrap = true;
+            _demoStyle = NewStyle(14, FontStyle.Bold, TextAnchor.MiddleCenter);
 
             _stylesReady = true;
         }

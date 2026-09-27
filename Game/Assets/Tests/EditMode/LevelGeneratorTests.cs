@@ -362,6 +362,21 @@ namespace TrustNoWall.Tests
                 Assert.That(p.Phase, Is.InRange(0f, p.Cycle));
             }
 
+            // No two patrols side by side (their timing windows could never line up).
+            for (int i = 0; i < l.Patrols.Count; i++)
+            {
+                for (int j = i + 1; j < l.Patrols.Count; j++)
+                {
+                    foreach (var a in l.Patrols[i].Path)
+                    {
+                        foreach (var b in l.Patrols[j].Path)
+                        {
+                            Assert.Greater(Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y), 1, id + " adjacent patrols " + a + " " + b);
+                        }
+                    }
+                }
+            }
+
             foreach (var d in l.Decoys)
             {
                 Assert.AreEqual(1, maze.OpenNeighbors(d.Cell).Count(), id + " decoy in a dead end");

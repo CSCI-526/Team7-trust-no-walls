@@ -616,7 +616,7 @@ namespace TrustNoWall.Core
 
                 var path = new List<Vector2Int> { branch.Junction };
                 path.AddRange(branch.Cells);
-                if (!path.TrueForAll(IsFreeCell))
+                if (!path.TrueForAll(IsFreeCell) || TouchesPatrol(path))
                 {
                     continue;
                 }
@@ -661,6 +661,31 @@ namespace TrustNoWall.Core
             return Commit(
                 () => { chosen.ForEach(Occupy); _b.Patrols.Add(element); },
                 () => { chosen.ForEach(Release); _b.Patrols.Remove(element); });
+        }
+
+        /// <summary>
+        /// True if any cell of <paramref name="path"/> is 4-adjacent to a cell of an existing
+        /// patrol. Two patrols side by side can leave no timing window: crossing both takes at
+        /// least two consecutive half-step occupancies with no safe cell to wait on between them,
+        /// and with unlucky phases their free windows never line up (an impossible level).
+        /// </summary>
+        private bool TouchesPatrol(List<Vector2Int> path)
+        {
+            foreach (var patrol in _b.Patrols)
+            {
+                foreach (var pc in patrol.Path)
+                {
+                    foreach (var c in path)
+                    {
+                        if (Mathf.Abs(pc.x - c.x) + Mathf.Abs(pc.y - c.y) <= 1)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         // ---------------------------------------------------------------- decoys

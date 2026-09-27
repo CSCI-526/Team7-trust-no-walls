@@ -28,6 +28,10 @@ namespace TrustNoWall.Game
         private const float IntroMaxDuration = 4f;
         private const float MaxDeltaTime = 0.1f;
 
+        // The sim is stepped in chunks of at most this size, re-reading the input source for each
+        // chunk, so the autopilot's timing stays accurate even when the frame rate drops.
+        private const float MaxInputChunk = 1f / 60f;
+
         private Camera _camera;
         private Transform _cameraRig;
         private MazeView _mazeView;
@@ -51,6 +55,16 @@ namespace TrustNoWall.Game
         public float TotalRunTime { get; private set; }
         public int BestLevel { get; private set; }
         public string DeathCause { get; private set; }
+
+        /// <summary>True while demo mode drives the input (shown as a DEMO tag in the HUD).</summary>
+        public bool DemoActive { get; private set; }
+
+        /// <summary>Swaps the input source (keyboard or autopilot); used by <see cref="DemoMode"/>.</summary>
+        public void SetInput(IDirectionSource input, bool demo)
+        {
+            _input = input;
+            DemoActive = demo;
+        }
 
         public void Configure(
             Camera camera, Transform cameraRig, MazeView mazeView, PlayerView playerView, Effects effects, Sfx sfx, IDirectionSource input)
@@ -103,9 +117,9 @@ namespace TrustNoWall.Game
 
             // Hidden debug key: jump straight to the next level. Kept in the shipped build to make
             // manual testing (and the user's own playtesting) fast.
-            if (_sim != null && CurrentState != State.Title && CurrentState != State.Paused && Input.GetKeyDown(KeyCode.F9))
+            if (Input.GetKeyDown(KeyCode.F9))
             {
-                BuildLevel(CurrentLevel + 1);
+                SkipLevel();
             }
 
             if (_sim != null)
@@ -139,6 +153,28 @@ namespace TrustNoWall.Game
             }
         }
 
+        /// <summary>Dismisses the intro card (as Space would); used by <see cref="DemoMode"/>.</summary>
+        public void DismissIntro()
+        {
+            if (CurrentState == State.IntroCard)
+            {
+                CurrentState = State.Playing;
+            }
+        }
+
+        /// <summary>
+        /// Jumps straight to the next level (the hidden F9 debug key, also used by
+        /// <see cref="DemoMode"/> if the autopilot keeps dying on one level). No-op on the Title or
+        /// while paused.
+        /// </summary>
+        public void SkipLevel()
+        {
+            if (_sim != null && CurrentState != State.Title && CurrentState != State.Paused)
+            {
+                BuildLevel(CurrentLevel + 1);
+            }
+        }
+
         private void TickPlaying()
         {
             if (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.Escape))
@@ -153,12 +189,17 @@ namespace TrustNoWall.Game
                 return;
             }
 
-            Dir? held = _input?.GetHeldDirection();
             float dt = Mathf.Min(Time.deltaTime, MaxDeltaTime);
-            IReadOnlyList<SimEvent> events = _sim.Step(dt, held);
-            for (int i = 0; i < events.Count; i++)
+            int chunks = Mathf.Max(1, Mathf.CeilToInt(dt / MaxInputChunk - 1e-4f));
+            float chunk = dt / chunks;
+            for (int c = 0; c < chunks && _sim.Status == SimStatus.Playing; c++)
             {
-                HandleEvent(events[i]);
+                Dir? held = _input?.GetHeldDirection();
+                IReadOnlyList<SimEvent> events = _sim.Step(chunk, held);
+                for (int i = 0; i < events.Count; i++)
+                {
+                    HandleEvent(events[i]);
+                }
             }
 
             if (_sim.Status == SimStatus.Dead)
@@ -213,8 +254,14 @@ namespace TrustNoWall.Game
             CurrentState = State.Playing;
         }
 
-        private void StartRun()
+        /// <summary>Starts a new run from the Title (Space/Enter, or <see cref="DemoMode"/>'s auto-start).</summary>
+        public void StartRun()
         {
+            if (CurrentState != State.Title)
+            {
+                return;
+            }
+
             _runSeed = new System.Random().Next();
             TotalRunTime = 0f;
             BuildLevel(1);

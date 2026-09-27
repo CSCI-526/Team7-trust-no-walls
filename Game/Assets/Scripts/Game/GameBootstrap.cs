@@ -61,6 +61,9 @@ namespace TrustNoWall.Game
             flow.Configure(camera, rigObject.transform, mazeView, playerView, effects, sfx, keyboard);
             hud.Flow = flow;
 
+            DemoMode demo = flowObject.AddComponent<DemoMode>();
+            demo.Configure(flow, keyboard, new AutopilotSource(() => flow.Sim));
+
             Debug.Log("Trust No Wall booted");
         }
     }

@@ -695,7 +695,10 @@ namespace TrustNoWall.Core
         /// </summary>
         private bool ChaserDanger(Vector2Int cell, int route, float t)
         {
-            if (!_layout.HasChaser || t < LevelSim.ChaserSpawnAt - 0.5f * LevelSim.ChaserStepTime)
+            // Use the chaser's actual current spawn time (from PrepareContext's ChaserRouteIndex
+            // call), not the fixed ChaserSpawnAt: a decoy found while Layout.HasChaser pushes the
+            // real spawn time later than the attempt-start default.
+            if (!_layout.HasChaser || t < _chaserLegStart - 0.5f * LevelSim.ChaserStepTime)
             {
                 return false;
             }

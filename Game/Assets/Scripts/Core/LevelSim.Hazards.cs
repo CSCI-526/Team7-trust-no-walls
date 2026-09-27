@@ -66,6 +66,12 @@ namespace TrustNoWall.Core
         private bool _chaserSpawned;
         private bool _chaserWasRetracing;
 
+        // The time the chaser will next spawn at Start. Starts at ChaserSpawnAt each attempt, but a
+        // decoy found while Layout.HasChaser despawns an already-spawned chaser and pushes this out
+        // to (decoy time + ChaserSpawnAt), restarting the countdown from when the decoy was found
+        // rather than from the attempt's start; see TriggerDecoy.
+        private float _chaserSpawnAt;
+
         public bool ChaserActive => _chaserSpawned;
 
         /// <summary>The cell used for collision purposes: half-step, like <see cref="PlayerOccupiedCell"/>.</summary>
@@ -174,7 +180,7 @@ namespace TrustNoWall.Core
         {
             if (!_chaserSpawned)
             {
-                legStart = ChaserSpawnAt;
+                legStart = _chaserSpawnAt;
                 return 0;
             }
 
@@ -288,7 +294,13 @@ namespace TrustNoWall.Core
             }
         }
 
-        /// <summary>Handles arriving on a decoy: reveals it, sends the player to Start, starts the reveal countdown.</summary>
+        /// <summary>
+        /// Handles arriving on a decoy: reveals it, sends the player to Start, starts the reveal
+        /// countdown. When the chaser is in this level, finding a decoy is also a hard reset for it:
+        /// an already-spawned chaser despawns immediately (rather than retracing to hunt down the
+        /// player at Start) and its recorded path is cleared back to just Start; either way its
+        /// spawn countdown restarts from now, not from the fixed attempt-start ChaserSpawnAt.
+        /// </summary>
         private void TriggerDecoy(Vector2Int cell)
         {
             _decoyFound.Add(cell);
@@ -306,6 +318,13 @@ namespace TrustNoWall.Core
             if (Layout.HasChaser)
             {
                 AppendToTrail(Layout.Start);
+
+                _chaserSpawned = false;
+                _chaserPath.Clear();
+                _chaserPath.Add(Layout.Start);
+                _chaserWasRetracing = false;
+                _prevChaserOccupied = null;
+                _chaserSpawnAt = Time + ChaserSpawnAt;
             }
         }
 
@@ -413,7 +432,7 @@ namespace TrustNoWall.Core
 
             if (!_chaserSpawned)
             {
-                if (Time >= ChaserSpawnAt)
+                if (Time >= _chaserSpawnAt)
                 {
                     _chaserSpawned = true;
                     _chaserPath.Clear();
@@ -514,6 +533,7 @@ namespace TrustNoWall.Core
             _chaserStepStart = 0f;
             _chaserSpawned = false;
             _chaserWasRetracing = false;
+            _chaserSpawnAt = ChaserSpawnAt;
         }
     }
 }

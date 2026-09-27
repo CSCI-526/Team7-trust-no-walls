@@ -368,14 +368,16 @@ namespace TrustNoWall.Tests
         }
 
         [Test]
-        public void Chaser_DecoyAfterChaserAdvanced_RetracesToStartInsteadOfSnapping()
+        public void Chaser_DecoyDespawnsChaser_AndRespawnsFiveSecondsAfterTheDecoy()
         {
+            // RULING: when the level has a chaser, finding a decoy despawns an already-spawned
+            // chaser immediately (rather than letting it retrace and hunt the player down at
+            // Start) and restarts its 5.0s spawn countdown from the moment the decoy was found,
+            // not from the fixed attempt-start ChaserSpawnAt.
+            //
             // a -> b -> c -> f -> decoyCell, with a turn at f so continuing the arrival direction
             // (Up) is a wall - the player genuinely stops at f rather than silently chaining on
             // toward the decoy (see the note on StepUntilCellReached / held-direction chaining).
-            // f -> decoyCell then uses a third direction (Left) that is also a wall from Start, so
-            // even if the decoy's arrival call has leftover time to spare, it cannot chain the
-            // player away from Start afterward.
             var a = new Vector2Int(0, 0);
             var b = new Vector2Int(1, 0);
             var c = new Vector2Int(2, 0);
@@ -395,48 +397,45 @@ namespace TrustNoWall.Tests
             StepUntilCellReached(sim, Dir.Up, f); // continuing Up from f is a wall: no overshoot
             Assert.AreEqual(f, sim.PlayerCell);
 
-            // Idle until the chaser has advanced through 2 legs (a -> b -> c), landing discretely on
-            // c, two cells from Start and one turn short of the player at f.
+            // Idle until the chaser has advanced through 2 legs (a -> b -> c), confirming it is
+            // active and away from Start before the decoy is found.
             StepUntilTime(sim, LevelSim.ChaserSpawnAt + 2f * LevelSim.ChaserStepTime + 0.03f, null);
             Assert.AreEqual(SimStatus.Playing, sim.Status, "chaser must not have caught the idle player yet");
-            Assert.IsTrue(sim.ChaserActive);
+            Assert.IsTrue(sim.ChaserActive, "chaser must be active before the decoy is found");
             Assert.AreEqual(c, sim.ChaserCell, "chaser should be two cells from Start, one short of the player");
 
-            // Walk on to the decoy: it sends the player back to Start and loop-erases the trail
-            // back to just [Start], well behind the chaser's current position.
+            // Walk on to the decoy: it sends the player back to Start.
             var events = new List<SimEvent>();
-            var lastChaserCell = sim.ChaserCell;
             int guard = 0;
             while (!events.Any(ev => ev.Kind == SimEventKind.DecoyFound) && guard++ < 60)
             {
                 events.AddRange(sim.Step(Dt, Dir.Left));
-                Assert.LessOrEqual(CellDistance(sim.ChaserCell, lastChaserCell), 1, "chaser jumped more than one cell in a step");
-                lastChaserCell = sim.ChaserCell;
             }
 
             Assert.IsTrue(events.Any(ev => ev.Kind == SimEventKind.DecoyFound));
             Assert.AreEqual(a, sim.PlayerCell, "the decoy sends the player back to Start");
-            Assert.IsFalse(sim.IsMoving, "no residual move should be chaining out of Start (Left is a wall there)");
 
-            // The chaser must retrace c -> b -> a one cell at a time, never snapping straight to a.
-            bool sawB = false;
+            // The chaser must be inactive the instant the decoy is found: no retracing hunt.
+            Assert.IsFalse(sim.ChaserActive, "the chaser must despawn the instant the decoy is found");
+            float decoyTime = sim.Time;
+
+            // It stays despawned right up to just before 5.0s after the decoy has elapsed.
+            StepUntilTime(sim, decoyTime + LevelSim.ChaserSpawnAt - 0.05f, null);
+            Assert.IsFalse(sim.ChaserActive, "the chaser must not respawn before 5.0s after the decoy");
+            Assert.AreEqual(SimStatus.Playing, sim.Status);
+
+            // It respawns at Start once 5.0s after the decoy (not the fixed attempt-start
+            // ChaserSpawnAt) have passed.
+            var respawnEvents = new List<SimEvent>();
             guard = 0;
-            while (sim.Status == SimStatus.Playing && guard++ < 400)
+            while (!sim.ChaserActive && sim.Status == SimStatus.Playing && guard++ < 20)
             {
-                sim.Step(Dt, null);
-                var cur = sim.ChaserCell;
-                Assert.LessOrEqual(CellDistance(cur, lastChaserCell), 1, "chaser jumped more than one cell in a step");
-                if (cur == b)
-                {
-                    sawB = true;
-                }
-
-                lastChaserCell = cur;
+                respawnEvents.AddRange(sim.Step(Dt, null));
             }
 
-            Assert.IsTrue(sawB, "the chaser must retrace through b on its way back to Start");
-            Assert.AreEqual(SimStatus.Dead, sim.Status);
-            Assert.AreEqual("Caught by the shadow", sim.DeathCause);
+            Assert.IsTrue(sim.ChaserActive, "the chaser must respawn 5.0s after the decoy");
+            Assert.AreEqual(a, sim.ChaserCell, "it respawns at Start");
+            Assert.IsTrue(respawnEvents.Any(ev => ev.Kind == SimEventKind.ChaserSpawned));
         }
 
         private static int CellDistance(Vector2Int a, Vector2Int b) => Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);

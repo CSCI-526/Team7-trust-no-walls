@@ -2,7 +2,7 @@
 
 A 2D top-down maze game where the maze itself is lying to you. Reach the Destination from the Start Point, but hidden walls, walls that move and vanish, floors that collapse, triggers that rewire the layout, teleporters, a fake goal and a shadow that hunts your trail all stand in the way. Every layout is guaranteed solvable and every deception follows a fixed, learnable rule, so dying and restarting the identical layout turns memory into the skill that gets you through.
 
-**Play online:** https://manasvardhan.github.io/trust-no-wall/
+**Play online:** https://csci-526.github.io/Team7-trust-no-walls/
 
 ## Controls
 

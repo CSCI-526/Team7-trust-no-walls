@@ -19,7 +19,7 @@ namespace TrustNoWall.Game
         public static readonly Color MemoryTile = MechanicInfo.Hex(0x4D8BFF);
 
         public static readonly Color PitFill = MechanicInfo.Hex(0x050608);
-        public static readonly Color PitRim = MechanicInfo.Hex(0x22242E);
+        public static readonly Color PitRim = MechanicInfo.Hex(0x000000);
         public static readonly Color CrackLine = MechanicInfo.Hex(0x0A0B10);
 
         public static readonly Color[] TriggerColors =

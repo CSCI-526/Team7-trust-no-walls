@@ -51,7 +51,7 @@ namespace TrustNoWall.Game
         /// Updates the visual from the current sim state. Called explicitly by <see cref="GameFlow"/>
         /// right after it steps the sim, so the player never renders a stale (one-frame-behind) pose.
         /// </summary>
-        public void Sync(float unscaledDeltaTime)
+        public void Sync(float deltaTime)
         {
             if (_sim == null)
             {
@@ -60,7 +60,7 @@ namespace TrustNoWall.Game
 
             if (_dying)
             {
-                _deathTimer += unscaledDeltaTime;
+                _deathTimer += deltaTime;
                 float t = Mathf.Clamp01(_deathTimer / DeathDuration);
                 transform.localScale = Vector3.one * (1f - t);
                 _body.color = Color.Lerp(Palette.Player, Color.red, Mathf.Min(1f, t * 1.6f));

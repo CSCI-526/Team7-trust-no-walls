@@ -80,8 +80,8 @@ Mechanic counts scale with grid area `A = N*N` and interior wall count `W` per t
 
 ## Links
 
-- Repository: https://github.com/ManasVardhan/trust-no-wall
-- Play online: https://manasvardhan.github.io/trust-no-wall/
+- Repository: https://github.com/CSCI-526/Team7-trust-no-walls
+- Play online: https://csci-526.github.io/Team7-trust-no-walls/
 
 ## Individual contributions
 

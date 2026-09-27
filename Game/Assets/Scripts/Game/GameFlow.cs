@@ -197,6 +197,8 @@ namespace TrustNoWall.Game
         {
             _sim.Reset();
             _playerView.Attach(_sim);
+            _introTimer = 0f;
+            CurrentState = State.Playing;
         }
 
         private void StartRun()

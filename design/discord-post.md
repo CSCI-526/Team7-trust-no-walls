@@ -2,7 +2,7 @@
 
 **Gameplay video:** [gameplay video link]
 **Descriptive document:** [descriptive document link]
-**Play online:** https://manasvardhan.github.io/trust-no-wall/
+**Play online:** https://csci-526.github.io/Team7-trust-no-walls/
 
 ## Logline
 A 2D top-down maze game where the maze itself is lying to you: hidden walls, walls that move and vanish, floors that collapse, triggers that rewire the layout, a fake goal, and a shadow that hunts your trail. Every layout is guaranteed solvable and every lie follows a learnable rule, so dying and trying again (on the exact same layout) turns memory into the real skill.

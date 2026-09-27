@@ -79,4 +79,4 @@ Qiming Xiao, Manas Vardhan
 
 ## Repository
 
-https://github.com/ManasVardhan/trust-no-wall
+https://github.com/CSCI-526/Team7-trust-no-walls

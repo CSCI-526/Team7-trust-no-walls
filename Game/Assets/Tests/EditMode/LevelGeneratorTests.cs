@@ -299,10 +299,15 @@ namespace TrustNoWall.Tests
             {
                 Assert.IsFalse(maze.HasWall(w.A), id);
                 Assert.IsFalse(maze.HasWall(w.B), id);
-                Assert.AreEqual(w.A.IsVertical, w.B.IsVertical, id + " parallel");
+                Assert.AreEqual(w.A.IsVertical, w.B.IsVertical, id + " same orientation");
+                // Collinear neighbors along the wall's own line (see the brief's playtest fix):
+                // a vertical wall segment (lower cell (x,y), separating (x,y)-(x+1,y)) pairs with
+                // the one directly above/below it, same x, adjacent y; a horizontal wall segment
+                // pairs with the one directly beside it, same y, adjacent x. Not a full cell apart
+                // on opposite sides of a shared middle cell (the pre-fix, unreadable geometry).
                 Vector2Int diff = w.B.A - w.A.A;
-                Vector2Int expected = w.A.IsVertical ? new Vector2Int(1, 0) : new Vector2Int(0, 1);
-                Assert.IsTrue(diff == expected || diff == -expected, id + " one cell apart");
+                Vector2Int expected = w.A.IsVertical ? new Vector2Int(0, 1) : new Vector2Int(1, 0);
+                Assert.IsTrue(diff == expected || diff == -expected, id + " collinear neighbor, not diagonal/gapped");
                 Assert.That(w.Phase, Is.InRange(0f, MovingWall.Cycle));
             }
 

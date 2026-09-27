@@ -12,7 +12,8 @@ namespace TrustNoWall.Core
     // Only static walls (visible and invisible) are walls in the maze.
 
     /// <summary>
-    /// A wall that slides between two parallel edges one cell apart. Cycle: dwell at A,
+    /// A wall that slides like a sliding door between two collinear neighboring edges of the same
+    /// orientation, along its own line (see <see cref="ElementPlacer"/>). Cycle: dwell at A,
     /// slide A to B, dwell at B, slide B to A. The blocking edge switches at a slide's midpoint.
     /// </summary>
     public sealed class MovingWall

@@ -18,6 +18,7 @@ namespace TrustNoWall.Game
         private const int TileOrder = 1;
         private const int PadOrder = 2;
         private const int WallOrder = 5;
+        private const int MovingWallTrackOrder = WallOrder - 1;
         private const int EnemyOrder = 8;
 
         private const float TriggerTween = 0.3f;
@@ -53,6 +54,19 @@ namespace TrustNoWall.Game
             public SpriteRenderer[] Dashes;
         }
 
+        private sealed class MovingWallVisual
+        {
+            public MovingWall Wall;
+            public Vector2 PosA;
+            public Vector2 PosB;
+            public Transform T;
+            public SpriteRenderer Renderer;
+            public SpriteRenderer GhostA;
+            public SpriteRenderer GhostB;
+            public Transform ChevronT;
+            public SpriteRenderer Chevron;
+        }
+
         private Camera _camera;
         private Transform _root;
         private int _n;
@@ -70,8 +84,7 @@ namespace TrustNoWall.Game
         private readonly List<(Edge edge, SpriteRenderer renderer)> _triggerWalls = new List<(Edge, SpriteRenderer)>();
         private readonly List<Transform> _teleporterSwirls = new List<Transform>();
         private readonly List<(RotatingGate gate, Transform bar)> _gates = new List<(RotatingGate, Transform)>();
-        private readonly List<(MovingWall wall, Transform t, SpriteRenderer renderer)> _movingWalls =
-            new List<(MovingWall, Transform, SpriteRenderer)>();
+        private readonly List<MovingWallVisual> _movingWalls = new List<MovingWallVisual>();
         private readonly List<(PhaseWall wall, SpriteRenderer renderer)> _phaseWalls = new List<(PhaseWall, SpriteRenderer)>();
         private readonly List<(Patrol patrol, Transform t)> _patrols = new List<(Patrol, Transform)>();
         private readonly List<InvisibleReveal> _invisibleReveals = new List<InvisibleReveal>();
@@ -331,8 +344,40 @@ namespace TrustNoWall.Game
         {
             foreach (var mw in layout.MovingWalls)
             {
-                var wall = CreateWallSegment(mw.A.WorldCenter(_n), mw.A.IsVertical, Palette.MovingWall, WallOrder, _root);
-                _movingWalls.Add((mw, wall.transform, wall));
+                Vector2 posA = mw.A.WorldCenter(_n);
+                Vector2 posB = mw.B.WorldCenter(_n);
+                bool vertical = mw.A.IsVertical;
+
+                // A thin, low-alpha track spanning both slots, so the two positions read as one
+                // sliding-door line rather than two unrelated wall edges.
+                var track = CreateSprite(SpriteFactory.WallPill, Palette.WithAlpha(Palette.MovingWall, 0.18f), MovingWallTrackOrder, _root);
+                track.transform.position = (posA + posB) / 2f;
+                track.transform.rotation = Quaternion.Euler(0f, 0f, vertical ? 90f : 0f);
+                track.transform.localScale = new Vector3(2f, 0.3f, 1f);
+
+                // Faint ghost outlines at each slot; SyncMovingWalls fades them in/out opposite the
+                // wall's own slide progress so the empty slot is always the one showing.
+                var ghostA = CreateWallSegment(posA, vertical, Palette.WithAlpha(Palette.MovingWall, 0f), MovingWallTrackOrder, _root);
+                var ghostB = CreateWallSegment(posB, vertical, Palette.WithAlpha(Palette.MovingWall, 0f), MovingWallTrackOrder, _root);
+
+                var wall = CreateWallSegment(posA, vertical, Palette.MovingWall, WallOrder, _root);
+
+                var chevron = CreateSprite(SpriteFactory.ArrowChevron, Palette.Background, WallOrder + 1, _root);
+                chevron.transform.localScale = Vector3.one * 0.45f;
+                chevron.gameObject.SetActive(false);
+
+                _movingWalls.Add(new MovingWallVisual
+                {
+                    Wall = mw,
+                    PosA = posA,
+                    PosB = posB,
+                    T = wall.transform,
+                    Renderer = wall,
+                    GhostA = ghostA,
+                    GhostB = ghostB,
+                    ChevronT = chevron.transform,
+                    Chevron = chevron,
+                });
             }
         }
 
@@ -505,16 +550,29 @@ namespace TrustNoWall.Game
 
         private void SyncMovingWalls(LevelSim sim, float t)
         {
-            foreach (var (wall, tr, renderer) in _movingWalls)
+            foreach (var v in _movingWalls)
             {
-                Vector2 posA = wall.A.WorldCenter(_n);
-                Vector2 posB = wall.B.WorldCenter(_n);
-                tr.position = Vector2.Lerp(posA, posB, wall.SlideProgressAt(t));
+                float progress = v.Wall.SlideProgressAt(t);
+                v.T.position = Vector2.Lerp(v.PosA, v.PosB, progress);
 
-                bool warn = wall.IsWarningAt(t);
-                renderer.color = warn
+                bool warn = v.Wall.IsWarningAt(t);
+                v.Renderer.color = warn
                     ? Color.Lerp(Palette.MovingWall, Color.white, 0.5f + 0.5f * Mathf.Sin(t * 30f))
                     : Palette.MovingWall;
+
+                // The empty slot's ghost brightens as the wall slides away from it.
+                v.GhostA.color = Palette.WithAlpha(Palette.MovingWall, 0.25f * progress);
+                v.GhostB.color = Palette.WithAlpha(Palette.MovingWall, 0.25f * (1f - progress));
+
+                // During the warning flash, show a chevron on the wall pointing where it will slide.
+                v.Chevron.gameObject.SetActive(warn);
+                if (warn)
+                {
+                    bool towardB = progress < 0.5f;
+                    Vector2 dir = towardB ? (v.PosB - v.PosA) : (v.PosA - v.PosB);
+                    v.ChevronT.position = v.T.position;
+                    v.ChevronT.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                }
             }
         }
 

@@ -69,9 +69,9 @@ namespace TrustNoWall.Tests
                     }
 
                     var extras = list.Where(m => !Intros[level].Contains(m)).ToList();
-                    if (level == 2)
+                    if (level == 2 || level == 3)
                     {
-                        Assert.AreEqual(0, extras.Count);
+                        Assert.AreEqual(0, extras.Count, $"level {level} seed {seed}");
                         continue;
                     }
 

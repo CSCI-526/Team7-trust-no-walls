@@ -11,9 +11,10 @@ namespace TrustNoWall.Core
     {
         /// <summary>
         /// Mechanics planned for <paramref name="level"/>, in canonical enum order.
-        /// Level 1: none. Levels 2..8: the mechanics introduced there, plus from level 3 on one
-        /// random earlier-introduced mechanic (at half count, see <see cref="IsHalf"/>).
-        /// Level 9+: exactly 4 random mechanics (5 from level 12).
+        /// Level 1: none. Levels 2 and 3 contain ONLY the mechanics introduced there (so a level's
+        /// first exposure to a mechanic is never muddied by another one). From level 4 on, levels
+        /// 4..8 also get one random earlier-introduced mechanic (at half count, see
+        /// <see cref="IsHalf"/>). Level 9+: exactly 4 random mechanics (5 from level 12).
         /// InvisibleWalls and MemoryTiles are one unit: picking either adds both (the pair counts
         /// as 2 toward the level 9+ total).
         /// </summary>
@@ -35,7 +36,7 @@ namespace TrustNoWall.Core
                     }
                 }
 
-                if (level >= 3)
+                if (level >= 4)
                 {
                     var earlier = Units(m => MechanicInfo.Get(m).IntroLevel < level);
                     result.AddRange(earlier[rng.Next(earlier.Count)]);
@@ -66,11 +67,11 @@ namespace TrustNoWall.Core
 
         /// <summary>
         /// True when <paramref name="m"/> appears at half count on <paramref name="level"/>: the
-        /// earlier mechanic added to intro levels 3..8.
+        /// earlier mechanic added to intro levels 4..8 (levels 2 and 3 never get one).
         /// </summary>
         public static bool IsHalf(Mechanic m, int level)
         {
-            return level >= 3 && level <= 8 && MechanicInfo.Get(m).IntroLevel < level;
+            return level >= 4 && level <= 8 && MechanicInfo.Get(m).IntroLevel < level;
         }
 
         /// <summary>

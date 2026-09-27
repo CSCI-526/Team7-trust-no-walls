@@ -55,7 +55,7 @@ namespace TrustNoWall.Core
         {
             new MechanicInfo(Mechanic.InvisibleWalls, "Invisible Walls", "Some walls are invisible. Touching one is fatal.", 2, 0xFF4D5E),
             new MechanicInfo(Mechanic.MemoryTiles, "Memory Tiles", "Blue tiles briefly reveal nearby invisible walls.", 2, 0x4D8BFF),
-            new MechanicInfo(Mechanic.MovingWalls, "Moving Walls", "Orange walls slide back and forth. Don't get crushed.", 3, 0xFF8C42),
+            new MechanicInfo(Mechanic.MovingWalls, "Moving Walls", "Orange walls slide between two spots. Wait for the gap.", 3, 0xFF8C42),
             new MechanicInfo(Mechanic.DisappearingWalls, "Disappearing Walls", "Cyan walls vanish and return. Cross while they're gone.", 3, 0x7FDBFF),
             new MechanicInfo(Mechanic.CollapsingTiles, "Collapsing Tiles", "Cracked tiles collapse soon after you step on them.", 4, 0x8A8F9E),
             new MechanicInfo(Mechanic.TriggerWalls, "Trigger Walls", "Pressure plates open and close the walls of their color.", 4, 0xFF8C42),

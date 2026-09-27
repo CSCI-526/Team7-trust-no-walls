@@ -386,15 +386,20 @@ namespace TrustNoWall.Core
 
         private bool TryMovingWall()
         {
-            // The wall slides across a middle cell between two opposite (parallel) edges of it.
+            // The wall slides like a sliding door along its own line, between two COLLINEAR
+            // neighboring edges of the same orientation: a vertical wall segment (separating
+            // cells that differ in x) pairs with the one directly above or below it (same x,
+            // adjacent y); a horizontal wall segment (separating cells that differ in y) pairs
+            // with the one directly beside it (same y, adjacent x). See the brief's playtest fix:
+            // the two positions must touch, not sit a full cell apart on opposite sides of one.
             var options = new List<(Edge, Edge)>();
             for (int x = 0; x < _maze.N; x++)
             {
                 for (int y = 0; y < _maze.N; y++)
                 {
-                    var middle = new Vector2Int(x, y);
-                    AddMovingWallOption(options, middle, Dir.Left);
-                    AddMovingWallOption(options, middle, Dir.Down);
+                    var lower = new Vector2Int(x, y);
+                    AddMovingWallOption(options, lower, vertical: true);
+                    AddMovingWallOption(options, lower, vertical: false);
                 }
             }
 
@@ -415,16 +420,38 @@ namespace TrustNoWall.Core
                 () => { _elementEdges.Remove(a); _elementEdges.Remove(b); _b.MovingWalls.Remove(element); });
         }
 
-        private void AddMovingWallOption(List<(Edge, Edge)> options, Vector2Int middle, Dir first)
+        private void AddMovingWallOption(List<(Edge, Edge)> options, Vector2Int lower, bool vertical)
         {
-            Dir second = DirUtil.Opposite(first);
-            if (!_maze.InBounds(middle + DirUtil.Delta(first)) || !_maze.InBounds(middle + DirUtil.Delta(second)))
+            Edge a, b;
+            if (vertical)
             {
-                return;
+                // Vertical wall segments (between (x,y)-(x+1,y) and (x,y+1)-(x+1,y+1)): the track
+                // runs north-south, so the pair is the same x, adjacent y.
+                var upper = lower + new Vector2Int(0, 1);
+                if (!_maze.InBounds(lower) || !_maze.InBounds(lower + new Vector2Int(1, 0))
+                    || !_maze.InBounds(upper) || !_maze.InBounds(upper + new Vector2Int(1, 0)))
+                {
+                    return;
+                }
+
+                a = Edge.Between(lower, Dir.Right);
+                b = Edge.Between(upper, Dir.Right);
+            }
+            else
+            {
+                // Horizontal wall segments (between (x,y)-(x,y+1) and (x+1,y)-(x+1,y+1)): the
+                // track runs east-west, so the pair is the same y, adjacent x.
+                var right = lower + new Vector2Int(1, 0);
+                if (!_maze.InBounds(lower) || !_maze.InBounds(lower + new Vector2Int(0, 1))
+                    || !_maze.InBounds(right) || !_maze.InBounds(right + new Vector2Int(0, 1)))
+                {
+                    return;
+                }
+
+                a = Edge.Between(lower, Dir.Up);
+                b = Edge.Between(right, Dir.Up);
             }
 
-            var a = Edge.Between(middle, first);
-            var b = Edge.Between(middle, second);
             if (IsFreeEdge(a) && IsFreeEdge(b) && IsPassage(a) && IsPassage(b)
                 && CanHostPeriodicEdge(a) && CanHostPeriodicEdge(b))
             {

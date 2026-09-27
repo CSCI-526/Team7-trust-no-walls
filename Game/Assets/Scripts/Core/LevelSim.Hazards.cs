@@ -17,6 +17,10 @@ namespace TrustNoWall.Core
         public const float ChaserStepTime = 0.32f;
         public const float DecoyRevealDuration = 2.5f;
 
+        // Defensive cap on how many chaser legs UpdateChaser will catch up on in one call (see the
+        // termination comment there). Far larger than any realistic per-frame catch-up.
+        private const int MaxCatchUpSteps = 10000;
+
         // ---- Collapsing tiles ----
         private readonly Dictionary<Vector2Int, float> _crackStart = new Dictionary<Vector2Int, float>();
         private readonly HashSet<Vector2Int> _collapsedTiles = new HashSet<Vector2Int>();
@@ -41,11 +45,26 @@ namespace TrustNoWall.Core
         // decoy sends also append their destination cell (see BeginTeleport/TriggerDecoy), so two
         // consecutive trail cells are not guaranteed to be adjacent; the chaser does not path-find
         // that gap; it simply treats the trail as its route and interpolates straight across it,
-        // "jumping" the gap over one normal ChaserStepTime leg like any other.
+        // "jumping" the gap over one normal ChaserStepTime leg like any other (this jump rule stays;
+        // it is not the same thing as the retrace below).
+        //
+        // The chaser also keeps its own recorded path: the cells it has actually stood on, in visit
+        // order, starting at Start (see _chaserPath). This is NOT the same list as the player's
+        // trail above and is never loop-erased by the player's movement. Every tick it checks
+        // whether the cell it currently occupies (the last entry of _chaserPath) is still on the
+        // live trail: if so it keeps following the trail forward one cell per ChaserStepTime as
+        // before; if the player's trail was loop-erased out from under it (a revisit, or a decoy
+        // sending the player back to Start), its current cell is no longer on the trail, and it
+        // instead walks back along its own recorded path, one cell per ChaserStepTime, until it
+        // reaches a cell that is on the live trail again, then resumes following from there. This
+        // is a real, regularly-reachable case (a player doubling back, or any decoy after the
+        // chaser has moved), not a rare edge case, and it never produces a larger-than-one-cell
+        // position jump.
         private readonly List<Vector2Int> _trail = new List<Vector2Int>();
-        private int _chaserFromIndex;
+        private readonly List<Vector2Int> _chaserPath = new List<Vector2Int>();
         private float _chaserStepStart;
         private bool _chaserSpawned;
+        private bool _chaserWasRetracing;
 
         public bool ChaserActive => _chaserSpawned;
 
@@ -59,13 +78,14 @@ namespace TrustNoWall.Core
                     return Layout.Start;
                 }
 
-                if (_chaserFromIndex >= _trail.Count - 1)
+                Vector2Int current = _chaserPath[_chaserPath.Count - 1];
+                if (!ChaserNextCell(out var next))
                 {
-                    return _trail[_chaserFromIndex];
+                    return current;
                 }
 
                 float progress = Mathf.Clamp01((Time - _chaserStepStart) / ChaserStepTime);
-                return progress < 0.5f ? _trail[_chaserFromIndex] : _trail[_chaserFromIndex + 1];
+                return progress < 0.5f ? current : next;
             }
         }
 
@@ -79,18 +99,69 @@ namespace TrustNoWall.Core
                     return Edge.CellCenter(Layout.Start, Layout.N);
                 }
 
-                if (_chaserFromIndex >= _trail.Count - 1)
+                Vector2Int current = _chaserPath[_chaserPath.Count - 1];
+                if (!ChaserNextCell(out var next))
                 {
-                    return Edge.CellCenter(_trail[_chaserFromIndex], Layout.N);
+                    return Edge.CellCenter(current, Layout.N);
                 }
 
                 float progress = Mathf.Clamp01((Time - _chaserStepStart) / ChaserStepTime);
-                return Vector2.Lerp(
-                    Edge.CellCenter(_trail[_chaserFromIndex], Layout.N),
-                    Edge.CellCenter(_trail[_chaserFromIndex + 1], Layout.N),
-                    progress);
+                return Vector2.Lerp(Edge.CellCenter(current, Layout.N), Edge.CellCenter(next, Layout.N), progress);
             }
         }
+
+        /// <summary>
+        /// True if the chaser has anywhere to move from its current cell (the last entry of
+        /// <see cref="_chaserPath"/>): forward along the live trail if the current cell is on it and
+        /// is not yet the trail's last cell, or one cell back along its own recorded path if the
+        /// current cell has fallen off the live trail (loop-erased away). Outputs that next cell.
+        /// </summary>
+        private bool ChaserNextCell(out Vector2Int next)
+        {
+            Vector2Int current = _chaserPath[_chaserPath.Count - 1];
+            int trailIndex = _trail.IndexOf(current);
+            if (trailIndex < 0)
+            {
+                if (_chaserPath.Count > 1)
+                {
+                    next = _chaserPath[_chaserPath.Count - 2];
+                    return true;
+                }
+
+                next = current;
+                return false;
+            }
+
+            if (trailIndex < _trail.Count - 1)
+            {
+                next = _trail[trailIndex + 1];
+                return true;
+            }
+
+            next = current;
+            return false;
+        }
+
+        /// <summary>
+        /// Commits the chaser's move to <see cref="ChaserNextCell"/>: pushes the next live-trail
+        /// cell onto its recorded path while following, or pops its own last cell while retracing.
+        /// </summary>
+        private void AdvanceChaserPath()
+        {
+            Vector2Int current = _chaserPath[_chaserPath.Count - 1];
+            if (_trail.IndexOf(current) < 0)
+            {
+                _chaserPath.RemoveAt(_chaserPath.Count - 1);
+            }
+            else
+            {
+                ChaserNextCell(out var next);
+                _chaserPath.Add(next);
+            }
+        }
+
+        /// <summary>True if the chaser's current cell (the last entry of <see cref="_chaserPath"/>) has fallen off the live trail.</summary>
+        private bool ChaserIsRetracing() => _trail.IndexOf(_chaserPath[_chaserPath.Count - 1]) < 0;
 
         /// <summary>The state of the collapsing tile at <paramref name="cell"/> (Intact if there is none).</summary>
         public TileState TileStateAt(Vector2Int cell)
@@ -208,9 +279,10 @@ namespace TrustNoWall.Core
         }
 
         /// <summary>
-        /// Appends a newly-entered cell to the chaser's trail, loop-erasing back to it if it is
-        /// already present. Clamps the chaser's own position back into the (possibly shortened)
-        /// trail if truncation removed the cell it was standing on or heading to.
+        /// Appends a newly-entered cell to the player's trail, loop-erasing back to it if it is
+        /// already present. This can leave the chaser's current cell (the end of its own
+        /// _chaserPath) off the live trail; that is discovered and handled by <see cref="ChaserNextCell"/>
+        /// on the next <see cref="UpdateChaser"/> tick (it starts retracing), not here.
         /// </summary>
         private void AppendToTrail(Vector2Int cell)
         {
@@ -226,12 +298,6 @@ namespace TrustNoWall.Core
             else
             {
                 _trail.Add(cell);
-            }
-
-            if (_chaserFromIndex > _trail.Count - 1)
-            {
-                _chaserFromIndex = _trail.Count - 1;
-                _chaserStepStart = Time;
             }
         }
 
@@ -319,26 +385,51 @@ namespace TrustNoWall.Core
                 if (Time >= ChaserSpawnAt)
                 {
                     _chaserSpawned = true;
-                    _chaserFromIndex = 0;
+                    _chaserPath.Clear();
+                    _chaserPath.Add(Layout.Start);
                     _chaserStepStart = Time;
+                    _chaserWasRetracing = ChaserIsRetracing();
                     _events.Add(new SimEvent(SimEventKind.ChaserSpawned, Layout.Start, string.Empty));
                 }
 
                 return;
             }
 
-            // Catch up however many legs the elapsed time covers (usually zero or one at this
-            // sub-step granularity), then pin the timer at the trail's current end so waiting for
-            // the player to extend it doesn't bank up a burst of steps.
-            while (_chaserFromIndex < _trail.Count - 1 && Time - _chaserStepStart >= ChaserStepTime)
-            {
-                _chaserStepStart += ChaserStepTime;
-                _chaserFromIndex++;
-            }
-
-            if (_chaserFromIndex >= _trail.Count - 1)
+            // If the player's trail changed under the chaser's feet mid-leg (a loop-erasure or a
+            // decoy send) such that following flips to retracing (or back), the leg's target is no
+            // longer meaningful: restart its clock from now, at the current cell, with progress 0.
+            // Without this, ChaserCell's half-step preview (below) could keep pointing at the old,
+            // now-abandoned target for the rest of the leg, then jump straight to the new target
+            // when the leg completes - possibly more than one cell away. Resetting here means any
+            // such switch is only ever seen as reverting to the current cell, never a jump.
+            bool retracingNow = ChaserIsRetracing();
+            if (retracingNow != _chaserWasRetracing)
             {
                 _chaserStepStart = Time;
+                _chaserWasRetracing = retracingNow;
+            }
+
+            // Catch up however many legs the elapsed time covers (usually zero or one at this
+            // sub-step granularity): forward along the live trail, or one cell back along its own
+            // recorded path if it has fallen off the trail. Then pin the timer at the current time
+            // once there is nowhere left to go, so waiting doesn't bank up a burst of steps.
+            // Termination: _chaserStepStart strictly increases by ChaserStepTime each iteration
+            // while Time (a field, not touched here) is fixed for the whole call, so the loop
+            // condition's left side strictly decreases; it cannot run more than
+            // (Time - starting _chaserStepStart) / ChaserStepTime times. MaxCatchUpSteps is a
+            // defensive cap on top of that proof, in case of a future change to this method.
+            int catchUpGuard = 0;
+            while (Time - _chaserStepStart >= ChaserStepTime && ChaserNextCell(out _) && catchUpGuard++ < MaxCatchUpSteps)
+            {
+                _chaserStepStart += ChaserStepTime;
+                AdvanceChaserPath();
+                _chaserWasRetracing = ChaserIsRetracing();
+            }
+
+            if (!ChaserNextCell(out _))
+            {
+                _chaserStepStart = Time;
+                _chaserWasRetracing = ChaserIsRetracing();
             }
         }
 
@@ -387,9 +478,11 @@ namespace TrustNoWall.Core
 
             _trail.Clear();
             _trail.Add(Layout.Start);
-            _chaserFromIndex = 0;
+            _chaserPath.Clear();
+            _chaserPath.Add(Layout.Start);
             _chaserStepStart = 0f;
             _chaserSpawned = false;
+            _chaserWasRetracing = false;
         }
     }
 }

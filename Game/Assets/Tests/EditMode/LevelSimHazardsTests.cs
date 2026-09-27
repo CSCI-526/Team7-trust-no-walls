@@ -39,6 +39,22 @@ namespace TrustNoWall.Tests
             return all;
         }
 
+        /// <summary>
+        /// Steps until sim.Time reaches targetTime, bounded by both a frame guard and Status: since
+        /// LevelSim.Step is a no-op once the sim is no longer Playing (Time never advances after
+        /// death), a plain "while (sim.Time &lt; targetTime)" loop would spin forever if the sim died
+        /// before reaching that time. Always terminates.
+        /// </summary>
+        private static void StepUntilTime(LevelSim sim, float targetTime, Dir? held, int maxFrames = 2000)
+        {
+            int i = 0;
+            while (sim.Time < targetTime && sim.Status == SimStatus.Playing && i < maxFrames)
+            {
+                sim.Step(Dt, held);
+                i++;
+            }
+        }
+
         // ---- Collapsing tiles ----
 
         [Test]
@@ -280,6 +296,150 @@ namespace TrustNoWall.Tests
             Assert.AreEqual(SimStatus.Dead, sim.Status);
             Assert.AreEqual("Caught by the shadow", sim.DeathCause);
         }
+
+        [Test]
+        public void Chaser_PlayerLoopsBackPastChaser_RetracesCellByCell()
+        {
+            // A stem into a small square loop: a -> b -> c1 -> c2 -> c3 -> b. The player walks the
+            // loop and pauses at c3, then closes it by re-entering b from c3 (a fresh direction,
+            // never walking back over c1/c2, so it never collides with the chaser waiting inside the
+            // loop). Every turn here is chosen so continuing straight past it is a wall - see
+            // StepUntilCellReached's note on LevelSim's "continue in the held direction" chaining:
+            // without that, the player could silently overshoot the intended pause cell.
+            // Closing the loop loop-erases c1/c2 out of the live trail while the chaser is still
+            // standing on c2, two cells deep - it must retrace c2 -> c1 -> b one cell at a time.
+            var a = new Vector2Int(0, 0);
+            var b = new Vector2Int(1, 0);
+            var c1 = new Vector2Int(2, 0);
+            var c2 = new Vector2Int(2, 1);
+            var c3 = new Vector2Int(1, 1);
+            var builder = new LevelLayoutBuilder(new Maze(4))
+                .Carve(a, b, c1, c2, c3, b)
+                .WithChaser(true);
+            var sim = new LevelSim(builder.Build());
+
+            StepUntilCellReached(sim, Dir.Right, b);
+            StepUntilCellReached(sim, Dir.Right, c1);
+            StepUntilCellReached(sim, Dir.Up, c2);
+            StepUntilCellReached(sim, Dir.Left, c3); // continuing Left from c3 is a wall: no overshoot
+            Assert.AreEqual(c3, sim.PlayerCell);
+
+            // Idle until the chaser has advanced through 3 legs (a -> b -> c1 -> c2), landing
+            // discretely on c2, two cells into the loop, well before it would reach c3.
+            StepUntilTime(sim, LevelSim.ChaserSpawnAt + 3f * LevelSim.ChaserStepTime + 0.03f, null);
+            Assert.AreEqual(SimStatus.Playing, sim.Status, "chaser must not have caught the idle player yet");
+            Assert.IsTrue(sim.ChaserActive);
+            Assert.AreEqual(c2, sim.ChaserCell, "chaser should be two cells into the loop");
+
+            // Close the loop: c3 -> b (a fresh direction; the player was genuinely stationary at c3,
+            // so this cannot silently chain any further). This never puts the player on c1/c2, so no
+            // collision with the chaser waiting inside the loop.
+            var lastChaserCell = sim.ChaserCell;
+            int guard = 0;
+            while (sim.PlayerCell != b && guard++ < 60)
+            {
+                sim.Step(Dt, Dir.Down);
+                Assert.LessOrEqual(CellDistance(sim.ChaserCell, lastChaserCell), 1, "chaser jumped more than one cell in a step");
+                lastChaserCell = sim.ChaserCell;
+            }
+
+            Assert.AreEqual(b, sim.PlayerCell);
+
+            // The chaser now retraces c2 -> c1 -> b, one cell per ChaserStepTime, until it catches
+            // the stationary player at b - never jumping straight from c2 to b.
+            bool sawC1 = false;
+            guard = 0;
+            while (sim.Status == SimStatus.Playing && guard++ < 400)
+            {
+                sim.Step(Dt, null);
+                var cur = sim.ChaserCell;
+                Assert.LessOrEqual(CellDistance(cur, lastChaserCell), 1, "chaser jumped more than one cell in a step");
+                if (cur == c1)
+                {
+                    sawC1 = true;
+                }
+
+                lastChaserCell = cur;
+            }
+
+            Assert.IsTrue(sawC1, "the chaser must retrace through c1, not snap straight to b");
+            Assert.AreEqual(SimStatus.Dead, sim.Status);
+            Assert.AreEqual("Caught by the shadow", sim.DeathCause);
+        }
+
+        [Test]
+        public void Chaser_DecoyAfterChaserAdvanced_RetracesToStartInsteadOfSnapping()
+        {
+            // a -> b -> c -> f -> decoyCell, with a turn at f so continuing the arrival direction
+            // (Up) is a wall - the player genuinely stops at f rather than silently chaining on
+            // toward the decoy (see the note on StepUntilCellReached / held-direction chaining).
+            // f -> decoyCell then uses a third direction (Left) that is also a wall from Start, so
+            // even if the decoy's arrival call has leftover time to spare, it cannot chain the
+            // player away from Start afterward.
+            var a = new Vector2Int(0, 0);
+            var b = new Vector2Int(1, 0);
+            var c = new Vector2Int(2, 0);
+            var f = new Vector2Int(2, 1);
+            var decoyCell = new Vector2Int(1, 1);
+            var builder = new LevelLayoutBuilder(new Maze(4))
+                .Carve(a, b, c, f, decoyCell)
+                .Add(new Decoy(decoyCell))
+                .WithChaser(true);
+            var sim = new LevelSim(builder.Build());
+
+            // Walk to f (one turn short of the decoy) first, so the player is not standing where we
+            // freeze the chaser below - it has somewhere left to go and won't reach (and catch) the
+            // stationary player during the wait.
+            StepUntilCellReached(sim, Dir.Right, b);
+            StepUntilCellReached(sim, Dir.Right, c);
+            StepUntilCellReached(sim, Dir.Up, f); // continuing Up from f is a wall: no overshoot
+            Assert.AreEqual(f, sim.PlayerCell);
+
+            // Idle until the chaser has advanced through 2 legs (a -> b -> c), landing discretely on
+            // c, two cells from Start and one turn short of the player at f.
+            StepUntilTime(sim, LevelSim.ChaserSpawnAt + 2f * LevelSim.ChaserStepTime + 0.03f, null);
+            Assert.AreEqual(SimStatus.Playing, sim.Status, "chaser must not have caught the idle player yet");
+            Assert.IsTrue(sim.ChaserActive);
+            Assert.AreEqual(c, sim.ChaserCell, "chaser should be two cells from Start, one short of the player");
+
+            // Walk on to the decoy: it sends the player back to Start and loop-erases the trail
+            // back to just [Start], well behind the chaser's current position.
+            var events = new List<SimEvent>();
+            var lastChaserCell = sim.ChaserCell;
+            int guard = 0;
+            while (!events.Any(ev => ev.Kind == SimEventKind.DecoyFound) && guard++ < 60)
+            {
+                events.AddRange(sim.Step(Dt, Dir.Left));
+                Assert.LessOrEqual(CellDistance(sim.ChaserCell, lastChaserCell), 1, "chaser jumped more than one cell in a step");
+                lastChaserCell = sim.ChaserCell;
+            }
+
+            Assert.IsTrue(events.Any(ev => ev.Kind == SimEventKind.DecoyFound));
+            Assert.AreEqual(a, sim.PlayerCell, "the decoy sends the player back to Start");
+            Assert.IsFalse(sim.IsMoving, "no residual move should be chaining out of Start (Left is a wall there)");
+
+            // The chaser must retrace c -> b -> a one cell at a time, never snapping straight to a.
+            bool sawB = false;
+            guard = 0;
+            while (sim.Status == SimStatus.Playing && guard++ < 400)
+            {
+                sim.Step(Dt, null);
+                var cur = sim.ChaserCell;
+                Assert.LessOrEqual(CellDistance(cur, lastChaserCell), 1, "chaser jumped more than one cell in a step");
+                if (cur == b)
+                {
+                    sawB = true;
+                }
+
+                lastChaserCell = cur;
+            }
+
+            Assert.IsTrue(sawB, "the chaser must retrace through b on its way back to Start");
+            Assert.AreEqual(SimStatus.Dead, sim.Status);
+            Assert.AreEqual("Caught by the shadow", sim.DeathCause);
+        }
+
+        private static int CellDistance(Vector2Int a, Vector2Int b) => Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
 
         // ---- Reset ----
 

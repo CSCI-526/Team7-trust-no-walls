@@ -45,8 +45,12 @@
   <text x="1010" y="380" text-anchor="middle" fill="#9AA0B4" font-size="12">N = L+3, same run seed</text>
   <text x="1010" y="396" text-anchor="middle" fill="#9AA0B4" font-size="12">new layout generated</text>
 
-  <!-- Title -> Level Intro -->
+  <!-- Title -> Level Intro (a level that introduces a mechanic) -->
   <line x1="220" y1="125" x2="292" y2="125" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Title -> Playing directly (level 1: no mechanic to introduce) -->
+  <path d="M 130 170 L 130 235 L 690 235 L 690 170" fill="none" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="410" y="228" text-anchor="middle" fill="#9AA0B4" font-size="11">level 1: straight to Playing (no mechanic to introduce)</text>
 
   <!-- Level Intro -> Playing -->
   <line x1="500" y1="125" x2="592" y2="125" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow)" />

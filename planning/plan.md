@@ -1,5 +1,7 @@
 # Trust No Wall Implementation Plan
 
+Note: the spec was amended during development; `planning/spec.md` is authoritative over this plan wherever the two disagree.
+
 Spec: `planning/spec.md` (binding authority; all numbers, texts and colors come from there).
 
 Repo root: `/Users/manasvardhan/Desktop/TrustNoWall` (git, branch `main`). Unity project: `Game/` (freshly created, never committed). A sibling project with proven tooling exists at `/Users/manasvardhan/Desktop/RuleShift` (same Unity version): copy and adapt from it where noted rather than reinventing.

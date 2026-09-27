@@ -1,7 +1,7 @@
 # Trust No Wall
 
-**Gameplay video:** [gameplay video link]
-**Descriptive document:** [descriptive document link]
+**Gameplay video:** https://github.com/CSCI-526/Team7-trust-no-walls/blob/main/video/trust-no-wall-gameplay.mp4
+**Descriptive document:** https://github.com/CSCI-526/Team7-trust-no-walls/blob/main/design/DesignDocument.md
 **Play online:** https://csci-526.github.io/Team7-trust-no-walls/
 
 ## Logline

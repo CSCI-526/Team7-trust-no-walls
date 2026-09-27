@@ -22,7 +22,7 @@ A 2D top-down maze game where the maze itself is lying to you. Reach the Destina
 - **Moving Walls** (level 3): slide between two edges on a timer; can crush.
 - **Disappearing Walls** (level 3): cycle solid and open; can crush.
 - **Collapsing Tiles** (level 4): crack and fall after being stepped on; the resulting pit is fatal.
-- **Trigger Walls** (level 4): pressure plates that open or close linked walls; can crush.
+- **Trigger Walls** (level 4): pressure plates that open or close linked walls when stepped on.
 - **Teleport Tiles** (level 5): teleport the player to a target cell, not always closer to the goal.
 - **Rotating Barriers** (level 5): gates that rotate which sides can be crossed.
 - **Patrolling Obstacles** (level 6): hazards that ping-pong along side branches; fatal on contact.
@@ -34,7 +34,7 @@ Full mechanic-by-mechanic detail, including how each one interacts with the game
 
 ## Level progression
 
-Level `L` has an `N x N` maze with `N = L + 3`, growing by one cell in each dimension every level. Levels 2 through 8 each introduce one or two new mechanics (see the table above) at full count, plus, from level 3 on, one earlier mechanic at half count. From level 9 on, each level draws 4 random unlocked mechanics (5 from level 12), with Invisible Walls and Memory Tiles always unlocked together. See [`design/DesignDocument.md`](design/DesignDocument.md) for the full level-by-level table and the mechanic count formulas.
+Level `L` has an `N x N` maze with `N = L + 3`, growing by one cell in each dimension every level. Levels 2 through 8 each introduce one or two new mechanics (see the table above) at full count, plus, from level 4 on, one earlier mechanic at half count. From level 9 on, each level draws 4 random unlocked mechanics (5 from level 12), with Invisible Walls and Memory Tiles always unlocked together. See [`design/DesignDocument.md`](design/DesignDocument.md) for the full level-by-level table and the mechanic count formulas.
 
 ## Running tests and building
 

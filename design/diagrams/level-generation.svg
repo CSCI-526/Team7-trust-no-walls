@@ -31,7 +31,7 @@
   <rect x="780" y="80" width="260" height="90" rx="14" fill="#1A1D27" stroke="#B084F5" stroke-width="2" />
   <text x="910" y="112" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Choose Mechanics</text>
   <text x="910" y="134" text-anchor="middle" fill="#9AA0B4" font-size="11">by level: intros + one earlier</text>
-  <text x="910" y="150" text-anchor="middle" fill="#9AA0B4" font-size="11">at half count (L&gt;=3); 4-5 random L&gt;=9</text>
+  <text x="910" y="150" text-anchor="middle" fill="#9AA0B4" font-size="11">at half count (L&gt;=4); 4-5 random L&gt;=9</text>
   <text x="910" y="164" text-anchor="middle" fill="#9AA0B4" font-size="11">counts from N, A=N*N, W (walls)</text>
 
   <!-- Place Element -->
@@ -64,7 +64,7 @@
   <!-- Row 2 arrows -->
   <line x1="500" y1="365" x2="532" y2="365" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
   <line x1="780" y1="365" x2="842" y2="365" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
-  <text x="811" y="345" text-anchor="middle" fill="#9AA0B4" font-size="11">all mechanics placed</text>
+  <text x="811" y="305" text-anchor="middle" fill="#9AA0B4" font-size="11">all mechanics placed</text>
 
   <!-- Validator -> Place Element (reject/accept loop) -->
   <path d="M 630 410 L 630 460 L 390 460 L 390 412" fill="none" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />

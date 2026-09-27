@@ -1,0 +1,12 @@
+{
+  "name": "trust-no-wall-web-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Web tooling for Trust No Wall (SVG diagram rendering).",
+  "scripts": {
+    "render-svg": "node ../render-svg.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}

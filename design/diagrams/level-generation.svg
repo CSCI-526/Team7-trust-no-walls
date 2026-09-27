@@ -1,0 +1,75 @@
+<svg width="1110" height="520" viewBox="0 0 1110 520" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#D8DCE8" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1110" height="520" fill="#0E1016" />
+
+  <text x="555" y="36" text-anchor="middle" fill="#D8DCE8" font-size="22" font-weight="600">Trust No Wall: Level Generation</text>
+
+  <!-- Seed -->
+  <rect x="40" y="80" width="200" height="90" rx="14" fill="#1A1D27" stroke="#4DE1FF" stroke-width="2" />
+  <text x="140" y="116" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Seed</text>
+  <text x="140" y="138" text-anchor="middle" fill="#9AA0B4" font-size="11">seed = runSeed*1000 + L</text>
+  <text x="140" y="154" text-anchor="middle" fill="#9AA0B4" font-size="11">N = L + 3</text>
+
+  <!-- Perfect Maze -->
+  <rect x="280" y="80" width="220" height="90" rx="14" fill="#1A1D27" stroke="#D8DCE8" stroke-width="2" />
+  <text x="390" y="116" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Perfect Maze</text>
+  <text x="390" y="138" text-anchor="middle" fill="#9AA0B4" font-size="11">recursive backtracker</text>
+  <text x="390" y="154" text-anchor="middle" fill="#9AA0B4" font-size="11">(iterative DFS from 0,0)</text>
+
+  <!-- Braid -->
+  <rect x="540" y="80" width="200" height="90" rx="14" fill="#1A1D27" stroke="#FF8C42" stroke-width="2" />
+  <text x="640" y="116" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Braid</text>
+  <text x="640" y="138" text-anchor="middle" fill="#9AA0B4" font-size="11">from level 4: remove</text>
+  <text x="640" y="154" text-anchor="middle" fill="#9AA0B4" font-size="11">floor(0.06 * N^2) walls</text>
+
+  <!-- Choose Mechanics -->
+  <rect x="780" y="80" width="260" height="90" rx="14" fill="#1A1D27" stroke="#B084F5" stroke-width="2" />
+  <text x="910" y="112" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Choose Mechanics</text>
+  <text x="910" y="134" text-anchor="middle" fill="#9AA0B4" font-size="11">by level: intros + one earlier</text>
+  <text x="910" y="150" text-anchor="middle" fill="#9AA0B4" font-size="11">at half count (L&gt;=3); 4-5 random L&gt;=9</text>
+  <text x="910" y="164" text-anchor="middle" fill="#9AA0B4" font-size="11">counts from N, A=N*N, W (walls)</text>
+
+  <!-- Place Element -->
+  <rect x="280" y="320" width="220" height="90" rx="14" fill="#1A1D27" stroke="#FFC857" stroke-width="2" />
+  <text x="390" y="352" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Place Next Element</text>
+  <text x="390" y="374" text-anchor="middle" fill="#9AA0B4" font-size="11">candidate cell/edge, obeys</text>
+  <text x="390" y="390" text-anchor="middle" fill="#9AA0B4" font-size="11">exclusion rules, up to 40 tries</text>
+
+  <!-- Validator -->
+  <rect x="540" y="320" width="240" height="90" rx="14" fill="#1A1D27" stroke="#FF4D5E" stroke-width="2" />
+  <text x="660" y="350" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Validator</text>
+  <text x="660" y="372" text-anchor="middle" fill="#9AA0B4" font-size="11">conservative directed graph:</text>
+  <text x="660" y="388" text-anchor="middle" fill="#9AA0B4" font-size="11">Dest in R, and R subset of D</text>
+
+  <!-- Layout -->
+  <rect x="850" y="320" width="200" height="90" rx="14" fill="#1A1D27" stroke="#3DDC84" stroke-width="2" />
+  <text x="950" y="352" text-anchor="middle" fill="#D8DCE8" font-size="17" font-weight="600">Layout (Level L)</text>
+  <text x="950" y="374" text-anchor="middle" fill="#9AA0B4" font-size="11">feeds Game Loop:</text>
+  <text x="950" y="390" text-anchor="middle" fill="#9AA0B4" font-size="11">Level Intro -&gt; Playing</text>
+
+  <!-- Row 1 arrows -->
+  <line x1="240" y1="125" x2="272" y2="125" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
+  <line x1="500" y1="125" x2="532" y2="125" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
+  <line x1="740" y1="125" x2="772" y2="125" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
+
+  <!-- Choose Mechanics -> Place Element -->
+  <path d="M 910 170 L 910 250 L 390 250 L 390 312" fill="none" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
+  <text x="650" y="243" text-anchor="middle" fill="#9AA0B4" font-size="11">for each mechanic, for each instance</text>
+
+  <!-- Row 2 arrows -->
+  <line x1="500" y1="365" x2="532" y2="365" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
+  <line x1="780" y1="365" x2="842" y2="365" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
+  <text x="811" y="345" text-anchor="middle" fill="#9AA0B4" font-size="11">all mechanics placed</text>
+
+  <!-- Validator -> Place Element (reject/accept loop) -->
+  <path d="M 630 410 L 630 460 L 390 460 L 390 412" fill="none" stroke="#D8DCE8" stroke-width="2" marker-end="url(#arrow2)" />
+  <text x="510" y="440" text-anchor="middle" fill="#9AA0B4" font-size="11">reject: retry (&lt;=40 tries), then skip</text>
+  <text x="510" y="478" text-anchor="middle" fill="#9AA0B4" font-size="11">accept: continue to next element</text>
+
+  <text x="540" y="502" text-anchor="middle" fill="#5C6178" font-size="11">Same (level, seed) always yields the same layout; dying restarts it unchanged</text>
+</svg>

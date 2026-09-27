@@ -126,6 +126,12 @@ namespace TrustNoWall.Game
 
         private void TickIntroCard()
         {
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                RestartAttempt();
+                return;
+            }
+
             _introTimer += Time.deltaTime;
             if (_introTimer >= IntroMaxDuration || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
             {
@@ -187,6 +193,12 @@ namespace TrustNoWall.Game
 
         private void TickPaused()
         {
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                RestartAttempt();
+                return;
+            }
+
             if (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.Escape))
             {
                 CurrentState = State.Playing;

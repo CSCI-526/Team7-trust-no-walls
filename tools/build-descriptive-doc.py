@@ -21,24 +21,61 @@ OUT = ROOT / "design" / "Trust-No-Wall-Descriptive-Document.docx"
 
 BOLD = re.compile(r"\*\*(.+?)\*\*")
 IMAGE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
+URL = re.compile(r"https?://\S+")
+
+
+def add_link(paragraph, url, size=None):
+    part = paragraph.part
+    r_id = part.relate_to(url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", is_external=True)
+    link = OxmlElement("w:hyperlink")
+    link.set(qn("r:id"), r_id)
+    run = OxmlElement("w:r")
+    props = OxmlElement("w:rPr")
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "1155CC")
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    props.append(color)
+    props.append(underline)
+    if size:
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), str(int(size * 2)))
+        props.append(sz)
+    run.append(props)
+    text = OxmlElement("w:t")
+    text.text = url
+    text.set(qn("xml:space"), "preserve")
+    run.append(text)
+    link.append(run)
+    paragraph._p.append(link)
+
+
+def add_plain(paragraph, text, size=None, bold=False):
+    pos = 0
+    for m in URL.finditer(text):
+        if m.start() > pos:
+            r = paragraph.add_run(text[pos:m.start()])
+            r.bold = bold
+            if size:
+                r.font.size = Pt(size)
+        add_link(paragraph, m.group(0), size)
+        pos = m.end()
+    if pos < len(text):
+        r = paragraph.add_run(text[pos:])
+        r.bold = bold
+        if size:
+            r.font.size = Pt(size)
 
 
 def add_runs(paragraph, text, size=None):
     pos = 0
     for m in BOLD.finditer(text):
         if m.start() > pos:
-            r = paragraph.add_run(text[pos:m.start()])
-            if size:
-                r.font.size = Pt(size)
-        r = paragraph.add_run(m.group(1))
-        r.bold = True
-        if size:
-            r.font.size = Pt(size)
+            add_plain(paragraph, text[pos:m.start()], size)
+        add_plain(paragraph, m.group(1), size, bold=True)
         pos = m.end()
     if pos < len(text):
-        r = paragraph.add_run(text[pos:])
-        if size:
-            r.font.size = Pt(size)
+        add_plain(paragraph, text[pos:], size)
 
 
 def shade(cell, fill):

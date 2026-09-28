@@ -2,6 +2,10 @@
 
 Team: Qiming Xiao, Manas Vardhan
 
+- **Play online:** https://csci-526.github.io/Team7-trust-no-walls/
+- **Gameplay video:** https://drive.google.com/file/d/108_E55riLKDuFTiWyroH48iHKu0jDZD_/view?usp=sharing
+- **Repository:** https://github.com/CSCI-526/Team7-trust-no-walls
+
 ## Logline
 
 Trust No Wall is a 2D top-down maze game (genre: maze / maze-chase) whose twist is that the maze itself cannot be trusted: walls hide, slide, vanish, rewire and lie about where the exit is, yet every layout is guaranteed solvable and every lie follows a fixed, learnable rule, so remembering the maze's tricks (not just its shape) is how you win.
@@ -82,6 +86,7 @@ Mechanic counts scale with grid area `A = N*N` and interior wall count `W` per t
 
 - Repository: https://github.com/CSCI-526/Team7-trust-no-walls
 - Play online: https://csci-526.github.io/Team7-trust-no-walls/
+- Gameplay video: https://drive.google.com/file/d/108_E55riLKDuFTiWyroH48iHKu0jDZD_/view?usp=sharing
 
 ## Individual contributions
 
@@ -90,7 +95,10 @@ Mechanic counts scale with grid area `A = N*N` and interior wall count `W` per t
 
 ## Diagrams
 
-See `design/diagrams/`:
+**Figure 1. Game loop.** From the title screen through intro cards, play, death (restart the same layout) and level completion (next, larger maze).
 
-- `game-loop.svg` / `game-loop.png`: the per-attempt and per-level flow, from Title through the intro card, Playing, Dying (restart to the same layout) or Level Complete (advance to level N+1).
-- `level-generation.svg` / `level-generation.png`: the level generation pipeline, from the seeded perfect maze through braiding, mechanic selection by level, per-element placement, and the solvability validator's accept/reject loop, to the final layout.
+![Game loop](diagrams/game-loop.png)
+
+**Figure 2. Level generation.** A seeded maze is generated, loops are added, mechanics are chosen by level, and each obstacle is kept only if the solvability validator confirms the level stays completable with no traps.
+
+![Level generation](diagrams/level-generation.png)

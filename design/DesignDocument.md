@@ -85,8 +85,8 @@ Mechanic counts scale with grid area `A = N*N` and interior wall count `W` per t
 
 ## Individual contributions
 
-- Qiming Xiao: [Add your main contributions here]
-- Manas Vardhan: [Add your main contributions here]
+- Qiming Xiao: Game concept and design direction (maze + deceptive-maze twist), genre research on Pac-Man, Maze Craze and Level Devil, design of the obstacle set and level progression (which mechanic unlocks when), playtesting and difficulty feedback, the descriptive document, and the gameplay video.
+- Manas Vardhan: Unity implementation: procedural maze generation and the solvability validator, the level simulation for all obstacles, rendering, animations, HUD, audio and game flow, the demo autopilot and automated tests, and the WebGL build hosted on GitHub Pages.
 
 ## Diagrams
 

@@ -241,8 +241,8 @@ para(PLAY, bold_prefix="Playable build (GitHub Pages): ")
 
 # Contributions
 heading("Individual Contributions")
-bullet("[Add your main contributions here]", bold_prefix="Qiming Xiao: ")
-bullet("[Add your main contributions here]", bold_prefix="Manas Vardhan: ")
+bullet("Game concept and design direction (maze + deceptive-maze twist), genre research on Pac-Man, Maze Craze and Level Devil, design of the obstacle set and level progression (which mechanic unlocks when), playtesting and difficulty feedback, the descriptive document, and the gameplay video.", bold_prefix="Qiming Xiao: ")
+bullet("Unity implementation: procedural maze generation and the solvability validator, the level simulation for all obstacles, rendering, animations, HUD, audio and game flow, the demo autopilot and automated tests, and the WebGL build hosted on GitHub Pages.", bold_prefix="Manas Vardhan: ")
 
 # Diagrams
 heading("Sketches and Diagrams")

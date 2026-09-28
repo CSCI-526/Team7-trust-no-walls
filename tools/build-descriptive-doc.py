@@ -94,9 +94,8 @@ para(REPO, bold_prefix="Repository: ")
 
 # Logline
 heading("Logline (Genre + Twist)")
-para("A 2D top-down maze game where the maze itself lies to you: walls hide, slide, vanish and rewire as you move, "
-     "but every lie follows a learnable rule and every maze is guaranteed to be solvable. "
-     "(Maze + A Deceptive, Changing Maze)")
+para("A 2D top-down maze game where the maze itself lies to you: walls hide, move, vanish and rewire, "
+     "but every lie follows a learnable rule (Maze + Deceptive, Changing Maze).")
 
 # Research
 heading("Genre Tropes Research and Twist")
@@ -148,15 +147,12 @@ bullet("It keeps the restart-to-the-same-challenge trope on purpose: dying resta
 
 # Prototype description
 heading("Short Prototype Description")
-para("The player controls a small blob in a 2D top-down maze and must walk from the Start pad (green ring) to the "
-     "Destination (gold star). The game starts with a 4 x 4 maze on Level 1, and each new level grows the maze by one "
-     "in each dimension (Maze Size = (Level + 3) x (Level + 3)). New obstacles are introduced gradually with an "
-     "intro card: invisible walls and memory tiles (level 2), moving and disappearing walls (3), collapsing tiles "
-     "and trigger walls (4), teleporters and rotating gates (5), patrols and one-way paths (6), a decoy destination "
-     "(7) and a shadow that chases the player's trail (8). From level 9 the game combines four or five random "
-     "mechanics per level. Touching a fatal obstacle plays a short failure effect and restarts the same layout from "
-     "the Start; reaching the Destination shows a completion banner and generates the next, larger maze. A demo mode "
-     "(add ?demo=1 to the URL, or press F2) lets an autopilot play the game.")
+para("The player steps through a top-down grid maze from a Start pad to a Destination star, and the maze grows by one "
+     "cell in each dimension every level (4 x 4 on level 1). As levels progress, new obstacles that deceive or change the "
+     "maze unlock: invisible walls, sliding and disappearing walls, collapsing floors, trigger plates that rewire walls, "
+     "teleporters, rotating gates, patrols, one-way paths, a decoy goal and a shadow that follows the player's trail. "
+     "Because each obstacle follows a fixed rule and dying restarts the same layout, the player must observe, time and "
+     "remember the maze's tricks instead of simply reading its map.")
 
 heading("Controls", level=2)
 table(["Input", "Action"], [
@@ -169,57 +165,15 @@ table(["Input", "Action"], [
 ], widths=[1.8, 4.9], font_size=10)
 
 # Mechanics matrix
-heading("Mechanic Matrices: Twist and Mechanics Matrix")
+heading("Mechanic Matrices: Twist and Mechanics Matrix (core mechanic)")
 matrix = [
     ["Deceptive, Changing Maze (Core Mechanic)",
      "The maze's walls and floor hide, move, vanish and rewire according to fixed rules while the player navigates it.",
      "This is the twist: the player cannot trust what they see and must learn each rule instead of just reading the map.",
      "Maze layout, walls, navigation, goal", "Subversion, Combination", "Deception; learnable rules"],
-    ["Invisible Walls", "Some walls are not drawn. Walking into one is fatal.",
-     "The maze literally lies: the visible map omits real walls.",
-     "Wall visibility, collision", "Subversion", "Deception; memory"],
-    ["Memory Tiles", "Stepping on a blue tile reveals the hidden walls within 3 cells for 3 seconds. Every invisible wall is within reach of a memory tile.",
-     "Keeps the central lie fair: hidden walls can always be learned without dying.",
-     "Information, exploration", "Combination", "Fairness; memory"],
-    ["Moving Walls", "Orange walls slide like a sliding door between two slots every few seconds, with a ghost outline, a track and a flash with an arrow before sliding.",
-     "A path that was open can become blocked; mistimed crossings crush the player.",
-     "Static corridors, timing", "Extension", "Reactivity; learnable rules"],
-    ["Disappearing Walls", "Cyan walls are solid for 3 s and gone for 2 s, flickering before they return.",
-     "A wall is not permanent and a gap is not safe; the player must time the crossing.",
-     "Wall permanence, shortcuts", "Subversion", "Reactivity"],
-    ["Collapsing Tiles", "Cracked tiles collapse 0.8 s after being stepped on; some restore, some stay as pits.",
-     "Even the floor cannot be trusted; the player must keep moving.",
-     "Floor/ground trust", "Combination", "Reactivity; pressure"],
-    ["Trigger Walls", "Pressure plates open and close the walls of their color each time the player steps on them.",
-     "The player's own movement rewires the maze, opening hidden corridors and closing others.",
-     "Level topology, cause and effect", "Combination", "Reactivity; learnable rules"],
-    ["Teleport Tiles", "Purple pads teleport the player to a marked target, sometimes closer and sometimes farther from the goal.",
-     "A shortcut can set you back as easily as help you.",
-     "Warp/shortcut trope", "Subversion", "Deception"],
-    ["Rotating Barriers", "Gates rotate every 2.5 s, alternating which sides of the cell can be entered.",
-     "An open-looking junction is only half open at any moment, on a readable clock.",
-     "Junctions", "Extension", "Timing; learnable rules"],
-    ["Patrolling Obstacles", "Red spiked orbs move back and forth through side corridors crossing the route.",
-     "Adds predictable enemies the player observes and times, like maze-chase ghosts.",
-     "Enemy avoidance", "Emphasis", "Timing; memory"],
-    ["One-Way Paths", "Arrow-marked edges can only be crossed in one direction.",
-     "An open corridor is secretly half closed; choices become commitments.",
-     "Two-way corridors", "Subversion", "Deception; commitment"],
-    ["Decoy Destination", "A fake goal at the end of a dead end sends the player back to Start and reveals the real goal. The real star spins; the decoy's does not.",
-     "Even the goal can lie, but there is always a subtle, fair tell.",
-     "Goal clarity", "Subversion", "Deception; learnable rules"],
-    ["Chasing Hazard", "A shadow appears 5 s into an attempt and follows the player's trail, slower than the player.",
-     "The maze reacts to the player's own choices and discourages standing still.",
-     "Chase enemy, pressure", "Combination", "Reactivity; pressure"],
-    ["Maze Growth", "Maze size is (Level + 3) x (Level + 3); obstacles grow in number and variety.",
-     "Gives the maze more room to hide and combine its lies as skill grows.",
-     "Difficulty curve, procedural generation", "Extension", "Escalating challenge"],
-    ["Same-Layout Restart", "Dying restarts the same maze from the Start with all obstacles reset.",
-     "A lie you die to once becomes a rule you can plan around.",
-     "Retry loop", "Emphasis", "Memory; fairness"],
 ]
 table(["Mechanics", "Description", "Interaction with Twist", "Affected Genre Elements", "Type of Genre Innovation", "Supports"],
-      matrix, widths=[1.1, 1.6, 1.6, 0.9, 0.8, 0.8], font_size=8)
+      matrix, widths=[1.1, 1.6, 1.6, 0.9, 0.8, 0.8], font_size=9)
 
 heading("Level progression", level=2)
 table(["Level", "Maze", "New mechanics"], [
